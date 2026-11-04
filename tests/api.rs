@@ -702,3 +702,107 @@ fn duplicate_attributes_with_equal_local_names_are_found() {
         );
     }
 }
+
+fn parse_with_caps(text: &str, attributes: u16, namespaces: u16) -> Result<Document<'_>, Error> {
+    let opt = ParsingOptions {
+        attributes_limit: attributes,
+        namespaces_limit: namespaces,
+        ..ParsingOptions::default()
+    };
+    Document::parse_with_options(text, opt)
+}
+
+#[test]
+fn attributes_limit_counts_one_element() {
+    let text = "<e a='1' b='2' xmlns:p='u'><f a='1' b='2'/></e>";
+    // Namespace declarations do not count as attributes.
+    assert!(parse_with_caps(text, 2, u16::MAX).is_ok());
+    assert_eq!(
+        parse_with_caps(text, 1, u16::MAX).unwrap_err(),
+        Error::AttributesLimitReached
+    );
+}
+
+#[test]
+fn namespaces_limit_counts_own_declarations() {
+    let text = "<e xmlns='d' xmlns:p='u' xmlns:q='v'/>";
+    assert!(parse_with_caps(text, u16::MAX, 3).is_ok());
+    assert_eq!(
+        parse_with_caps(text, u16::MAX, 2).unwrap_err(),
+        Error::NamespacesLimitReached
+    );
+}
+
+#[test]
+fn namespaces_limit_counts_inherited_namespaces() {
+    let text = "<r xmlns:p='u' xmlns:q='v'><c xmlns:s='w'/></r>";
+    assert!(parse_with_caps(text, u16::MAX, 3).is_ok());
+    assert_eq!(
+        parse_with_caps(text, u16::MAX, 2).unwrap_err(),
+        Error::NamespacesLimitReached
+    );
+}
+
+#[test]
+fn namespaces_limit_counts_a_redeclared_prefix_once() {
+    // `c` rebinds `p`, so it has two namespaces in scope, not three.
+    let text = "<r xmlns:p='u' xmlns:q='v'><c xmlns:p='w'/></r>";
+    assert!(parse_with_caps(text, u16::MAX, 2).is_ok());
+}
+
+#[test]
+fn namespaces_limit_ignores_elements_that_declare_nothing() {
+    // Children that declare nothing share their parent's namespaces.
+    let text = "<r xmlns:p='u' xmlns:q='v'><c><p:d/></c></r>";
+    assert!(parse_with_caps(text, u16::MAX, 2).is_ok());
+}
+
+#[test]
+fn zero_limits() {
+    assert!(parse_with_caps("<e xmlns:p='u'/>", 0, u16::MAX).is_ok());
+    assert_eq!(
+        parse_with_caps("<e a='1'/>", 0, u16::MAX).unwrap_err(),
+        Error::AttributesLimitReached
+    );
+    assert!(parse_with_caps("<e a='1'/>", u16::MAX, 0).is_ok());
+    assert_eq!(
+        parse_with_caps("<e xmlns='d'/>", u16::MAX, 0).unwrap_err(),
+        Error::NamespacesLimitReached
+    );
+}
+
+#[test]
+fn namespaces_limit_ignores_the_xml_prefix() {
+    let xml = "xmlns:xml='http://www.w3.org/XML/1998/namespace'";
+    assert!(parse_with_caps(&format!("<r {xml}/>"), u16::MAX, 0).is_ok());
+    assert!(parse_with_caps(&format!("<r xmlns:p='u' {xml}/>"), u16::MAX, 1).is_ok());
+    assert!(parse_with_caps(&format!("<r {xml} xmlns:p='u'/>"), u16::MAX, 1).is_ok());
+}
+
+#[test]
+fn limits_come_after_other_errors() {
+    // `attributes_limit` is checked once the tag is read, so any other error
+    // in the tag comes first. `namespaces_limit` is checked as each
+    // declaration is stored, after that declaration's own checks.
+    assert!(matches!(
+        parse_with_caps("<e a='1' b='&x;'/>", 1, u16::MAX).unwrap_err(),
+        Error::UnknownEntityReference(..)
+    ));
+    assert!(matches!(
+        parse_with_caps("<e xmlns:p='u' xmlns:q='&x;'/>", u16::MAX, 1).unwrap_err(),
+        Error::UnknownEntityReference(..)
+    ));
+    assert!(matches!(
+        parse_with_caps("<e xmlns:p='u' xmlns:p='v'/>", u16::MAX, 1).unwrap_err(),
+        Error::DuplicatedNamespace(..)
+    ));
+    assert!(matches!(
+        parse_with_caps("<e a='1' b='2' c='&x;'/>", 1, u16::MAX).unwrap_err(),
+        Error::UnknownEntityReference(..)
+    ));
+    // An error later in the tag comes after the namespace limit.
+    assert_eq!(
+        parse_with_caps("<e xmlns:p='u' xmlns:q='v' c='&x;'/>", u16::MAX, 1).unwrap_err(),
+        Error::NamespacesLimitReached
+    );
+}
