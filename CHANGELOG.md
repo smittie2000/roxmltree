@@ -5,12 +5,19 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
+### Added
+- `ParsingOptions::attributes_limit` and `ParsingOptions::namespaces_limit` to limit
+  the number of attributes and namespaces on one element. Both default to `u16::MAX`.
+  Code that builds `ParsingOptions` with a struct literal needs `..Default::default()`.
+
 ### Changed
 - Faster parsing of text, comments, CDATA, processing instructions and attribute
   values.
 - Text without references whose only `\r` is a leading `\r\n`, such as indentation
   in files with Windows line ends, is borrowed from the input instead of copied.
   `Node::text_storage` returns `StringStorage::Borrowed` for it now.
+- `Error::NamespacesLimitReached` displays as "too many namespaces were parsed", since
+  it is also raised for `namespaces_limit`.
 
 ### Fixed
 - Reject an element with more than `u16::MAX` attributes. Duplicate-attribute
