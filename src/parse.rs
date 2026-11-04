@@ -104,11 +104,16 @@ pub enum Error {
 
     /// Indicates that too many attributes were parsed.
     ///
-    /// Raised when one element has more than `u16::MAX` attributes, or when
+    /// Raised when one element has more than
+    /// [`ParsingOptions::attributes_limit`] attributes, or when
     /// the document-wide attribute count reaches `u32::MAX`.
     AttributesLimitReached,
 
     /// Indicates that too many namespaces were parsed.
+    ///
+    /// Raised when one element has more than
+    /// [`ParsingOptions::namespaces_limit`] namespaces in scope, or when
+    /// the document has more than `u16::MAX` distinct namespaces.
     NamespacesLimitReached,
 
     /// An invalid name.
@@ -277,7 +282,7 @@ impl core::fmt::Display for Error {
                 write!(f, "too many attributes were parsed")
             }
             Error::NamespacesLimitReached => {
-                write!(f, "more than 2^16 unique namespaces were parsed")
+                write!(f, "too many namespaces were parsed")
             }
             Error::InvalidName(pos) => {
                 write!(f, "invalid name token at {}", pos)
@@ -355,6 +360,36 @@ pub struct ParsingOptions<'input> {
     /// Default: u32::MAX (no limit)
     pub nodes_limit: u32,
 
+    /// Sets the maximum number of attributes on one element.
+    ///
+    /// Namespace declarations (`xmlns` and `xmlns:*`) are not counted here,
+    /// see [`namespaces_limit`](Self::namespaces_limit).
+    ///
+    /// Checking an element for duplicate attributes takes time quadratic in
+    /// its number of attributes. This limit bounds how many are compared and
+    /// is checked as each one is read. It does not bound the length of names,
+    /// values or namespace URIs, which only the size of the input does.
+    ///
+    /// Default: u16::MAX
+    pub attributes_limit: u16,
+
+    /// Sets the maximum number of namespaces in scope on one element.
+    ///
+    /// This counts the element's own declarations plus every binding it
+    /// inherits, so a child of an element with 100 namespaces that declares
+    /// one more has 101 in scope.
+    ///
+    /// The built-in `xml` prefix is not counted.
+    ///
+    /// Each element that declares a namespace stores its own copy of the
+    /// bindings it inherits, two bytes each, and checks its declarations
+    /// against each other. This limit bounds that memory and work per
+    /// element. It does not bound the length of namespace URIs, or the number
+    /// of distinct namespaces in the document, which stays at most `u16::MAX`.
+    ///
+    /// Default: u16::MAX
+    pub namespaces_limit: u16,
+
     /// Function to resolve external entities
     ///
     /// See [`EntityResolver`] for the signature
@@ -383,6 +418,8 @@ impl Default for ParsingOptions<'_> {
         ParsingOptions {
             allow_dtd: false,
             nodes_limit: u32::MAX,
+            attributes_limit: u16::MAX,
+            namespaces_limit: u16::MAX,
             entity_resolver: None,
         }
     }
@@ -399,6 +436,8 @@ impl fmt::Debug for ParsingOptions<'_> {
         fmt.debug_struct("ParsingOptions")
             .field("allow_dtd", &self.allow_dtd)
             .field("nodes_limit", &self.nodes_limit)
+            .field("attributes_limit", &self.attributes_limit)
+            .field("namespaces_limit", &self.namespaces_limit)
             .field("entity_resolver", &entity_resolver)
             .finish()
     }
@@ -783,6 +822,17 @@ fn process_attribute<'input>(
     value: StrSpan<'input>,
     ctx: &mut Context<'input>,
 ) -> Result<()> {
+    // Limits are checked before the value is normalized, so an element over
+    // a limit costs nothing more. The built-in `xml` binding isn't stored,
+    // so declaring it doesn't count.
+    if prefix == XMLNS || local == XMLNS {
+        if !(prefix == XMLNS && local == NS_XML_PREFIX) {
+            ctx.check_namespaces_limit()?;
+        }
+    } else if ctx.current_attributes.len() >= ctx.opt.attributes_limit as usize {
+        return Err(Error::AttributesLimitReached);
+    }
+
     let value = normalize_attribute(value, ctx)?;
 
     if prefix == XMLNS {
@@ -879,7 +929,7 @@ fn process_element<'input>(
         }
     }
 
-    let namespaces = ctx.resolve_namespaces();
+    let namespaces = ctx.resolve_namespaces()?;
     ctx.namespace_start_idx = ctx.doc.namespaces.tree_order.len();
 
     let attributes = resolve_attributes(namespaces, ctx)?;
@@ -967,13 +1017,26 @@ fn process_element<'input>(
 }
 
 impl Context<'_> {
-    fn resolve_namespaces(&mut self) -> ShortRange {
+    /// Fails if the current element cannot store one more namespace binding.
+    ///
+    /// Called before each stored declaration, so the duplicate check that
+    /// follows scans at most `namespaces_limit` entries.
+    #[inline]
+    fn check_namespaces_limit(&self) -> Result<()> {
+        let declared = self.doc.namespaces.tree_order.len() - self.namespace_start_idx;
+        if declared >= self.opt.namespaces_limit as usize {
+            return Err(Error::NamespacesLimitReached);
+        }
+        Ok(())
+    }
+
+    fn resolve_namespaces(&mut self) -> Result<ShortRange> {
         if let NodeKind::Element { ref namespaces, .. } =
             self.doc.nodes[self.parent_id.get_usize()].kind
         {
             let parent_ns = *namespaces;
             if self.namespace_start_idx == self.doc.namespaces.tree_order.len() {
-                return parent_ns;
+                return Ok(parent_ns);
             }
 
             // An inherited binding is shadowed only by the element's own
@@ -981,6 +1044,7 @@ impl Context<'_> {
             // or `xmlns:p` is an error), and so do the parent's bindings,
             // so the ones copied here need not be searched again.
             let own_ns = self.namespace_start_idx..self.doc.namespaces.tree_order.len();
+            let limit = self.opt.namespaces_limit as usize;
             for i in parent_ns.to_urange() {
                 let name = self
                     .doc
@@ -988,12 +1052,17 @@ impl Context<'_> {
                     .get(self.doc.namespaces.tree_order[i])
                     .name;
                 if !self.doc.namespaces.exists(own_ns.clone(), name) {
+                    // Stop as soon as the element is at the limit, so no
+                    // element stores more than `namespaces_limit` bindings.
+                    if self.doc.namespaces.tree_order.len() - self.namespace_start_idx >= limit {
+                        return Err(Error::NamespacesLimitReached);
+                    }
                     self.doc.namespaces.push_ref(i);
                 }
             }
         }
 
-        (self.namespace_start_idx..self.doc.namespaces.tree_order.len()).into()
+        Ok((self.namespace_start_idx..self.doc.namespaces.tree_order.len()).into())
     }
 }
 
@@ -1002,12 +1071,9 @@ fn resolve_attributes(namespaces: ShortRange, ctx: &mut Context) -> Result<Short
         return Ok(ShortRange::new(0, 0));
     }
 
-    // Duplicate-attribute checks are O(n²) in the current element's
-    // attributes. Cap one element at u16::MAX so a huge attribute list
-    // cannot turn into a parse DoS. The document-wide list still uses u32.
-    if ctx.current_attributes.len() > u16::MAX as usize
-        || ctx.doc.attributes.len() + ctx.current_attributes.len() >= u32::MAX as usize
-    {
+    // `attributes_limit` is checked as each attribute is read, in
+    // `process_attribute`. The document-wide list still uses u32.
+    if ctx.doc.attributes.len() + ctx.current_attributes.len() >= u32::MAX as usize {
         return Err(Error::AttributesLimitReached);
     }
 

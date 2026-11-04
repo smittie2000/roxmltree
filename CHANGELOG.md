@@ -5,6 +5,16 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
+### Added
+- `ParsingOptions::attributes_limit` and `ParsingOptions::namespaces_limit`: the most
+  attributes, and the most namespaces in scope, on one element. Both default to
+  `u16::MAX`. Adding fields to `ParsingOptions` breaks code that builds it with a
+  struct literal without `..Default::default()`.
+
+### Changed
+- `Error::NamespacesLimitReached` displays as "too many namespaces were parsed", since
+  it is also raised for `namespaces_limit`.
+
 ### Fixed
 - Reject an element with more than `u16::MAX` attributes. Duplicate-attribute
   checks are quadratic, and the previous document-wide `u32` cap did not bound
