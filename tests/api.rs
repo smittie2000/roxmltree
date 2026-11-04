@@ -408,3 +408,19 @@ fn too_many_attributes_on_one_element() {
     let err = Document::parse(&text).unwrap_err();
     assert_eq!(err, Error::AttributesLimitReached);
 }
+
+#[test]
+fn duplicated_attributes_are_compared_by_expanded_name() {
+    // With few attributes and with more than 16.
+    let many: String = (0..20).map(|i| format!(" b{i}='1'")).collect();
+    for padding in ["", &many] {
+        let data = format!("<e xmlns:x='u1' xmlns:y='u2'{padding} a='1' x:a='2' y:a='3'/>");
+        let doc = Document::parse(&data).unwrap();
+        assert!(doc.root_element().has_attribute(("u2", "a")));
+
+        let data = format!("<e xmlns:x='u' xmlns:y='u'{padding} x:a='1' y:a='2'/>");
+        let err = Document::parse(&data).unwrap_err();
+        let col = 36 + padding.len() as u32;
+        assert_eq!(err, Error::DuplicatedAttribute("a".to_string(), TextPos::new(1, col)));
+    }
+}

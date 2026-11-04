@@ -1,6 +1,7 @@
 use alloc::string::{String, ToString};
 use alloc::{vec, vec::Vec};
 use alloc::borrow::Cow;
+use alloc::collections::BTreeSet;
 use core::ops::Range;
 use core::mem::take;
 use core::fmt;
@@ -989,9 +990,7 @@ fn resolve_attributes(namespaces: ShortRange, ctx: &mut Context) -> Result<Short
         return Ok(ShortRange::new(0, 0));
     }
 
-    // Duplicate-attribute checks are O(n²) in the current element's
-    // attributes. Cap one element at u16::MAX so a huge attribute list
-    // cannot turn into a parse DoS. The document-wide list still uses u32.
+    // Cap one element at u16::MAX attributes. The document-wide list still uses u32.
     if ctx.current_attributes.len() > u16::MAX as usize
         || ctx.doc.attributes.len() + ctx.current_attributes.len() >= u32::MAX as usize
     {
@@ -999,6 +998,10 @@ fn resolve_attributes(namespaces: ShortRange, ctx: &mut Context) -> Result<Short
     }
 
     let start_idx = ctx.doc.attributes.len();
+    // Scanning the previous attributes is faster for a few attributes,
+    // but quadratic for many, so those use a set of expanded names instead.
+    let use_set = ctx.current_attributes.len() > 16;
+    let mut names = BTreeSet::new();
 
     for attr in ctx.current_attributes.drain(..) {
         let namespace_idx = if attr.prefix == NS_XML_PREFIX {
@@ -1020,9 +1023,15 @@ fn resolve_attributes(namespaces: ShortRange, ctx: &mut Context) -> Result<Short
         };
 
         // Check for duplicated attributes.
-        if ctx.doc.attributes[start_idx..].iter().any(|attr| {
-            attr.name.as_expanded_name(&ctx.doc) == attr_name.as_expanded_name(&ctx.doc)
-        }) {
+        let is_duplicate = if use_set {
+            let uri = namespace_idx.map(|idx| ctx.doc.namespaces.get(idx).uri());
+            !names.insert((uri, attr.local))
+        } else {
+            ctx.doc.attributes[start_idx..].iter().any(|attr| {
+                attr.name.as_expanded_name(&ctx.doc) == attr_name.as_expanded_name(&ctx.doc)
+            })
+        };
+        if is_duplicate {
             let pos = ctx.doc.text_pos_at(attr.range.start);
             return Err(Error::DuplicatedAttribute(attr.local.to_string(), pos));
         }
