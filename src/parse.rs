@@ -1,6 +1,7 @@
 use alloc::string::{String, ToString};
 use alloc::{vec, vec::Vec};
 use alloc::borrow::Cow;
+use alloc::collections::BTreeSet;
 use core::ops::Range;
 use core::mem::take;
 use core::fmt;
@@ -550,6 +551,8 @@ impl LoopDetector {
 struct Context<'input> {
     opt: ParsingOptions<'input>,
     namespace_start_idx: usize,
+    // Prefixes declared by the current element.
+    namespace_prefixes: BTreeSet<&'input str>,
     current_attributes: Vec<TempAttributeData<'input>>,
     awaiting_subtree: Vec<NodeId>,
     parent_prefixes: Vec<&'input str>,
@@ -677,6 +680,7 @@ fn parse<'input>(text: &'input str, opt: ParsingOptions<'input>) -> Result<Docum
     let mut ctx = Context {
         opt,
         namespace_start_idx: 1,
+        namespace_prefixes: BTreeSet::new(),
         current_attributes: Vec::with_capacity(16),
         entities: Vec::new(),
         awaiting_subtree: Vec::new(),
@@ -805,11 +809,7 @@ fn process_attribute<'input>(
         }
 
         // Check for duplicated namespaces.
-        if ctx
-            .doc
-            .namespaces
-            .exists(ctx.namespace_start_idx, Some(local))
-        {
+        if !is_xml_ns_uri && !ctx.namespace_prefixes.insert(local) {
             let pos = ctx.doc.text_pos_at(range.start);
             return Err(Error::DuplicatedNamespace(local.to_string(), pos));
         }
@@ -872,6 +872,7 @@ fn process_element<'input>(
 
     let namespaces = ctx.resolve_namespaces();
     ctx.namespace_start_idx = ctx.doc.namespaces.tree_order.len();
+    ctx.namespace_prefixes.clear();
 
     let attributes = resolve_attributes(namespaces, ctx)?;
 

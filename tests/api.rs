@@ -408,3 +408,12 @@ fn too_many_attributes_on_one_element() {
     let err = Document::parse(&text).unwrap_err();
     assert_eq!(err, Error::AttributesLimitReached);
 }
+
+#[test]
+fn duplicated_namespaces_are_checked_per_element() {
+    let data = "<r xmlns:a='1' xmlns:b='2'><c xmlns:a='3' xmlns:b='4'/><c xmlns:a='5'/></r>";
+    assert!(Document::parse(data).is_ok());
+
+    let err = Document::parse("<r xmlns:a='1'><c xmlns:a='2' xmlns:a='3'/></r>").unwrap_err();
+    assert_eq!(err, Error::DuplicatedNamespace("a".to_string(), TextPos::new(1, 31)));
+}
