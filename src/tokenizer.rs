@@ -997,7 +997,8 @@ impl<'input> Stream<'input> {
 
             let n = u32::from_str_radix(value, radix).ok()?;
 
-            let c = char::from_u32(n).unwrap_or('\u{FFFD}');
+            // Surrogates and values above U+10FFFF are not XML characters either.
+            let c = char::from_u32(n)?;
             if !c.is_xml_char() {
                 return None;
             }

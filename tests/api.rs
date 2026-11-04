@@ -408,3 +408,22 @@ fn too_many_attributes_on_one_element() {
     let err = Document::parse(&text).unwrap_err();
     assert_eq!(err, Error::AttributesLimitReached);
 }
+
+#[test]
+fn char_references_must_be_xml_chars() {
+    for text in [
+        "<p>&#xD800;</p>",
+        "<p>&#55296;</p>",
+        "<p>&#x110000;</p>",
+        "<p a='&#xD800;'/>",
+    ] {
+        assert!(
+            matches!(Document::parse(text), Err(Error::MalformedEntityReference(_))),
+            "{text}"
+        );
+    }
+
+    let doc = Document::parse("<p a='&#x10FFFF;'>&#xFFFD;</p>").unwrap();
+    assert_eq!(doc.root_element().attribute("a"), Some("\u{10FFFF}"));
+    assert_eq!(doc.root_element().text(), Some("\u{FFFD}"));
+}
