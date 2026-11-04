@@ -417,3 +417,9 @@ fn duplicated_namespaces_are_checked_per_element() {
     let err = Document::parse("<r xmlns:a='1'><c xmlns:a='2' xmlns:a='3'/></r>").unwrap_err();
     assert_eq!(err, Error::DuplicatedNamespace("a".to_string(), TextPos::new(1, 31)));
 }
+
+#[test]
+fn duplicated_default_namespace() {
+    let err = Document::parse("<e xmlns='a' xmlns='b'/>").unwrap_err();
+    assert_eq!(err, Error::DuplicatedAttribute("xmlns".to_string(), TextPos::new(1, 14)));
+}

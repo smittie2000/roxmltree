@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   a single element.
 - Quadratic parsing time when checking an element with many namespace
   declarations for duplicates.
+- A repeated default namespace declaration (`xmlns`) on one element is an error now.
 
 ## [0.21.2] - 2026-10-24
 ### Fixed

@@ -831,6 +831,11 @@ fn process_attribute<'input>(
             return Err(Error::UnexpectedXmlnsUri(pos));
         }
 
+        if ctx.doc.namespaces.exists(ctx.namespace_start_idx, None) {
+            let pos = ctx.doc.text_pos_at(range.start);
+            return Err(Error::DuplicatedAttribute(XMLNS.to_string(), pos));
+        }
+
         ctx.doc.namespaces.push_ns(None, value)?;
     } else {
         #[cfg(not(feature = "positions"))]
