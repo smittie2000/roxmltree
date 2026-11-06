@@ -576,6 +576,27 @@ fn line_ends_in_text() {
 }
 
 #[test]
+fn crlf_indentation_is_borrowed() {
+    let doc = Document::parse("<a>\r\n  <b/>\r\nx\r</a>").unwrap();
+    let texts: Vec<_> = doc
+        .root_element()
+        .children()
+        .filter(|n| n.is_text())
+        .collect();
+    assert_eq!(texts[0].text(), Some("\n  "));
+    assert!(matches!(
+        texts[0].text_storage(),
+        Some(StringStorage::Borrowed(_))
+    ));
+    // A `\r` after the first `\r\n` still needs a copy.
+    assert_eq!(texts[1].text(), Some("\nx\n"));
+    assert!(matches!(
+        texts[1].text_storage(),
+        Some(StringStorage::Owned(_))
+    ));
+}
+
+#[test]
 fn duplicated_default_namespace() {
     let err = Document::parse("<e xmlns='a' xmlns='b'/>").unwrap_err();
     assert_eq!(err, Error::DuplicatedNamespace(String::new(), TextPos::new(1, 14)));

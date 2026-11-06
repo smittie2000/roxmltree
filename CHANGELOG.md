@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   `memchr`, and the skipped text is checked once, instead of one `char` at a time.
 - Most text is checked for XML characters and `]]>` in one pass.
 - Line ends in text without references are normalized a run at a time, as in CDATA.
+- Text whose only `\r` is a leading `\r\n`, such as indentation in files with Windows
+  line ends, is borrowed from the input instead of copied. `Node::text_storage`
+  returns `StringStorage::Borrowed` for it now.
 
 ### Fixed
 - Reject an element with more than `u16::MAX` attributes. Duplicate-attribute
