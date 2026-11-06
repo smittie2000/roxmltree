@@ -561,6 +561,25 @@ fn cdata_end_in_text() {
 }
 
 #[test]
+fn line_endings_in_text_and_cdata() {
+    for (text, expected) in [
+        ("x\r", "x\n"),
+        ("\r\r", "\n\n"),
+        ("\r\r\n", "\n\n"),
+        ("\n\r", "\n\n"),
+        ("\r\n\r", "\n\n"),
+    ] {
+        for xml in [
+            format!("<a>{text}</a>"),
+            format!("<a><![CDATA[{text}]]></a>"),
+        ] {
+            let doc = Document::parse(&xml).unwrap();
+            assert_eq!(doc.root_element().text(), Some(expected), "{xml:?}");
+        }
+    }
+}
+
+#[test]
 fn duplicated_default_namespace() {
     let err = Document::parse("<e xmlns='a' xmlns='b'/>").unwrap_err();
     assert_eq!(err, Error::DuplicatedNamespace(String::new(), TextPos::new(1, 14)));
