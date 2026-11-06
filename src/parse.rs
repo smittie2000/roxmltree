@@ -1180,6 +1180,15 @@ fn normalize_line_endings(mut text: &str) -> Cow<'_, str> {
         return Cow::Borrowed(text);
     }
 
+    // Indentation in a file with Windows line ends: a leading `\r\n` and no
+    // other `\r` normalizes to the same text without its first byte.
+    if pos == Some(0)
+        && text.as_bytes().get(1) == Some(&b'\n')
+        && memchr(b'\r', &text.as_bytes()[2..]).is_none()
+    {
+        return Cow::Borrowed(&text[1..]);
+    }
+
     let mut buf = String::with_capacity(text.len());
 
     while let Some(pos1) = pos {
