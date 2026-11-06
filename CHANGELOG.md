@@ -23,6 +23,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   compared first.
 - Comments or CDATA full of `<`, or text full of `=`, made parsing reserve about
   72 bytes per input byte up front. The initial guess is now capped by the input size.
+- Text and attribute values from an external entity that needed normalizing were
+  read from the document instead of the entity, and so were the positions of errors
+  inside it. The result was wrong text, a wrong error or position, or a panic.
+  Character references in an external entity are now kept as they would be in the
+  document.
 
 ## [0.21.2] - 2026-10-24
 ### Fixed

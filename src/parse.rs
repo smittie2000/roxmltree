@@ -4,6 +4,7 @@ use alloc::borrow::Cow;
 use core::ops::Range;
 use core::mem::take;
 use core::fmt;
+use core::ptr;
 use memchr::{memchr, memchr2, memchr_iter};
 
 use crate::{
@@ -564,10 +565,18 @@ struct Context<'input> {
     parent_id: NodeId,
     tag_name: TagNameSpan<'input>,
     loop_detector: LoopDetector,
+    /// The text that the ranges of the current tokens are ranges of: the
+    /// document, or an external entity's text while its content is parsed.
+    text: &'input str,
     doc: Document<'input>,
 }
 
 impl<'input> Context<'input> {
+    /// Returns the position of `pos` in the text the current tokens are from.
+    fn text_pos_at(&self, pos: usize) -> TextPos {
+        tokenizer::Stream::new(self.text).gen_text_pos_from(pos)
+    }
+
     fn append_node(&mut self, kind: NodeKind<'input>, range: Range<usize>) -> Result<NodeId> {
         if self.doc.nodes.len() >= self.opt.nodes_limit as usize {
             return Err(Error::NodesLimitReached);
@@ -700,6 +709,7 @@ fn parse<'input>(text: &'input str, opt: ParsingOptions<'input>) -> Result<Docum
         parent_id: NodeId::new(0),
         tag_name: TagNameSpan::new_null(),
         loop_detector: LoopDetector::default(),
+        text,
         doc,
     };
 
@@ -744,7 +754,7 @@ impl<'input> tokenizer::XmlEvents<'input> for Context<'input> {
                 self.reset_after_text();
 
                 if prefix == XMLNS {
-                    let pos = self.doc.text_pos_at(start + 1);
+                    let pos = self.text_pos_at(start + 1);
                     return Err(Error::InvalidElementNamePrefix(pos));
                 }
 
@@ -797,7 +807,7 @@ fn process_attribute<'input>(
     if prefix == XMLNS {
         // The xmlns namespace MUST NOT be declared as the default namespace.
         if value.as_str() == NS_XMLNS_URI {
-            let pos = ctx.doc.text_pos_at(range.start);
+            let pos = ctx.text_pos_at(range.start);
             return Err(Error::UnexpectedXmlnsUri(pos));
         }
 
@@ -808,13 +818,13 @@ fn process_attribute<'input>(
         // It MUST NOT be bound to any other namespace name.
         if local == NS_XML_PREFIX {
             if !is_xml_ns_uri {
-                let pos = ctx.doc.text_pos_at(range.start);
+                let pos = ctx.text_pos_at(range.start);
                 return Err(Error::InvalidXmlPrefixUri(pos));
             }
         } else {
             // The xml namespace MUST NOT be bound to a non-xml prefix.
             if is_xml_ns_uri {
-                let pos = ctx.doc.text_pos_at(range.start);
+                let pos = ctx.text_pos_at(range.start);
                 return Err(Error::UnexpectedXmlUri(pos));
             }
         }
@@ -822,7 +832,7 @@ fn process_attribute<'input>(
         // Check for duplicated namespaces.
         let own_ns = ctx.namespace_start_idx..ctx.doc.namespaces.tree_order.len();
         if ctx.doc.namespaces.exists(own_ns, Some(local)) {
-            let pos = ctx.doc.text_pos_at(range.start);
+            let pos = ctx.text_pos_at(range.start);
             return Err(Error::DuplicatedNamespace(local.to_string(), pos));
         }
 
@@ -833,19 +843,19 @@ fn process_attribute<'input>(
     } else if local == XMLNS {
         // The xml namespace MUST NOT be declared as the default namespace.
         if value.as_str() == NS_XML_URI {
-            let pos = ctx.doc.text_pos_at(range.start);
+            let pos = ctx.text_pos_at(range.start);
             return Err(Error::UnexpectedXmlUri(pos));
         }
 
         // The xmlns namespace MUST NOT be declared as the default namespace.
         if value.as_str() == NS_XMLNS_URI {
-            let pos = ctx.doc.text_pos_at(range.start);
+            let pos = ctx.text_pos_at(range.start);
             return Err(Error::UnexpectedXmlnsUri(pos));
         }
 
         let own_ns = ctx.namespace_start_idx..ctx.doc.namespaces.tree_order.len();
         if ctx.doc.namespaces.exists(own_ns, None) {
-            let pos = ctx.doc.text_pos_at(range.start);
+            let pos = ctx.text_pos_at(range.start);
             return Err(Error::DuplicatedNamespace(String::new(), pos));
         }
 
@@ -881,7 +891,7 @@ fn process_element<'input>(
 
         if let tokenizer::ElementEnd::Close(..) = end_token {
             return Err(Error::UnexpectedEntityCloseTag(
-                ctx.doc.text_pos_at(token_range.start),
+                ctx.text_pos_at(token_range.start),
             ));
         } else {
             unreachable!("should be already checked by the tokenizer");
@@ -900,6 +910,7 @@ fn process_element<'input>(
                 ctx.tag_name.prefix_pos,
                 ctx.tag_name.prefix,
                 &ctx.doc,
+                ctx.text,
             )?;
             let new_element_id = ctx.append_node(
                 NodeKind::Element {
@@ -930,7 +941,7 @@ fn process_element<'input>(
                     return Err(Error::UnexpectedCloseTag(
                         gen_qname_string(parent_prefix, tag_name.local_name),
                         gen_qname_string(prefix, local),
-                        ctx.doc.text_pos_at(token_range.start),
+                        ctx.text_pos_at(token_range.start),
                     ));
                 }
             }
@@ -946,7 +957,7 @@ fn process_element<'input>(
                 // <p>&p;&p;
 
                 return Err(Error::UnexpectedEntityCloseTag(
-                    ctx.doc.text_pos_at(token_range.start),
+                    ctx.text_pos_at(token_range.start),
                 ));
             }
         }
@@ -956,6 +967,7 @@ fn process_element<'input>(
                 ctx.tag_name.prefix_pos,
                 ctx.tag_name.prefix,
                 &ctx.doc,
+                ctx.text,
             )?;
             ctx.parent_id = ctx.append_node(
                 NodeKind::Element {
@@ -1033,7 +1045,13 @@ fn resolve_attributes(namespaces: ShortRange, ctx: &mut Context) -> Result<Short
             // always has no value.'
             None
         } else {
-            get_ns_idx_by_prefix(namespaces, attr.range.start, attr.prefix, &ctx.doc)?
+            get_ns_idx_by_prefix(
+                namespaces,
+                attr.range.start,
+                attr.prefix,
+                &ctx.doc,
+                ctx.text,
+            )?
         };
 
         let attr_name = ExpandedNameIndexed {
@@ -1047,7 +1065,7 @@ fn resolve_attributes(namespaces: ShortRange, ctx: &mut Context) -> Result<Short
             attr.name.local_name == attr_name.local_name
                 && attr.name.as_expanded_name(&ctx.doc) == attr_name.as_expanded_name(&ctx.doc)
         }) {
-            let pos = ctx.doc.text_pos_at(attr.range.start);
+            let pos = tokenizer::Stream::new(ctx.text).gen_text_pos_from(attr.range.start);
             return Err(Error::DuplicatedAttribute(attr.local.to_string(), pos));
         }
 
@@ -1079,7 +1097,7 @@ fn process_text<'input>(
 
     let mut text_buffer = TextBuffer::new();
     let mut is_as_is = false; // TODO: explain
-    let mut stream = Stream::from_substr(ctx.doc.text, range.clone());
+    let mut stream = Stream::from_substr(ctx.text, range.clone());
     while !stream.at_end() {
         match parse_next_chunk(&mut stream, &ctx.entities)? {
             NextChunk::Byte(c) => {
@@ -1092,7 +1110,10 @@ fn process_text<'input>(
             }
             NextChunk::Char(c) => {
                 for b in CharToBytes::new(c) {
-                    if ctx.loop_detector.depth > 0 {
+                    // Inside an internal entity, which is a range of the
+                    // document. An external entity's references are read as
+                    // if its content were in the document.
+                    if ctx.loop_detector.depth > 0 && ptr::eq(ctx.text, ctx.doc.text) {
                         text_buffer.push_from_text(b, stream.at_end());
                     } else {
                         // Characters not from entity should be added as is.
@@ -1112,17 +1133,15 @@ fn process_text<'input>(
                 ctx.loop_detector.inc_references(&stream)?;
                 ctx.loop_detector.inc_depth(&stream)?;
 
-                let text = if fragment.range().start == 0 {
-                    fragment.as_str()
-                } else {
-                    ctx.doc.text
-                };
-
+                let text = entity_text(fragment, ctx.doc.text);
                 let mut stream = Stream::from_substr(text, fragment.range());
                 let prev_tag_name = ctx.tag_name;
+                let prev_text = ctx.text;
                 ctx.tag_name = TagNameSpan::new_null();
+                ctx.text = text;
                 tokenizer::parse_content(&mut stream, ctx)?;
                 ctx.tag_name = prev_tag_name;
+                ctx.text = prev_text;
                 text_buffer.clear();
 
                 ctx.loop_detector.dec_depth();
@@ -1212,6 +1231,19 @@ fn parse_next_chunk<'a>(stream: &mut Stream<'a>, entities: &[Entity<'a>]) -> Res
     }
 }
 
+/// Returns the text that an entity's value is a range of.
+///
+/// A value from the entity resolver is a range of its own text, starting at 0.
+/// A value declared in the document is a range of the document, and can't
+/// start at 0, since the document starts with markup.
+fn entity_text<'input>(value: StrSpan<'input>, doc_text: &'input str) -> &'input str {
+    if value.range().start == 0 {
+        value.as_str()
+    } else {
+        doc_text
+    }
+}
+
 // https://www.w3.org/TR/REC-xml/#AVNormalize
 fn normalize_attribute<'input>(
     text: StrSpan<'input>,
@@ -1221,15 +1253,21 @@ fn normalize_attribute<'input>(
     // But in rare cases it can be just an another character.
     if memchr2(b'&', b'\t', text.as_str().as_bytes()).is_some() || memchr2(b'\n', b'\r', text.as_str().as_bytes()).is_some() {
         let mut text_buffer = TextBuffer::new();
-        _normalize_attribute(text, &mut text_buffer, ctx)?;
+        _normalize_attribute(ctx.text, text, &mut text_buffer, ctx)?;
         Ok(StringStorage::new_owned(&text_buffer.finish()))
     } else {
         Ok(StringStorage::Borrowed(text.as_str()))
     }
 }
 
-fn _normalize_attribute(text: StrSpan, buffer: &mut TextBuffer, ctx: &mut Context) -> Result<()> {
-    let mut stream = Stream::from_substr(ctx.doc.text, text.range());
+/// `source` is the text that `text.range()` is a range of.
+fn _normalize_attribute(
+    source: &str,
+    text: StrSpan,
+    buffer: &mut TextBuffer,
+    ctx: &mut Context,
+) -> Result<()> {
+    let mut stream = Stream::from_substr(source, text.range());
     while !stream.at_end() {
         // Safe, because we already checked that the stream is not at the end.
         let c = stream.curr_byte_unchecked();
@@ -1245,7 +1283,9 @@ fn _normalize_attribute(text: StrSpan, buffer: &mut TextBuffer, ctx: &mut Contex
         match stream.consume_reference() {
             Some(Reference::Char(ch)) => {
                 for b in CharToBytes::new(ch) {
-                    if ctx.loop_detector.depth > 0 {
+                    // As in `process_text`: only an internal entity's
+                    // references get the entity rules.
+                    if ctx.loop_detector.depth > 0 && ptr::eq(source, ctx.doc.text) {
                         // Escaped `<` inside an ENTITY is an error.
                         // Escaped `<` outside an ENTITY is ok.
                         if b == b'<' {
@@ -1266,7 +1306,8 @@ fn _normalize_attribute(text: StrSpan, buffer: &mut TextBuffer, ctx: &mut Contex
                 Some(entity) => {
                     ctx.loop_detector.inc_references(&stream)?;
                     ctx.loop_detector.inc_depth(&stream)?;
-                    _normalize_attribute(entity.value, buffer, ctx)?;
+                    let source = entity_text(entity.value, ctx.doc.text);
+                    _normalize_attribute(source, entity.value, buffer, ctx)?;
                     ctx.loop_detector.dec_depth();
                 }
                 None => {
@@ -1289,6 +1330,8 @@ fn get_ns_idx_by_prefix(
     prefix_pos: usize,
     prefix: &str,
     doc: &Document<'_>,
+    // The text that `prefix_pos` is a position in.
+    text: &str,
 ) -> Result<Option<NamespaceIdx>> {
     // Prefix CAN be empty when the default namespace was defined.
     //
@@ -1313,7 +1356,7 @@ fn get_ns_idx_by_prefix(
                 //
                 // Example:
                 // <e random:a='b'/>
-                let pos = doc.text_pos_at(prefix_pos);
+                let pos = tokenizer::Stream::new(text).gen_text_pos_from(prefix_pos);
                 Err(Error::UnknownNamespace(prefix.to_string(), pos))
             } else {
                 // If an URI was not found and prefix IS empty than
