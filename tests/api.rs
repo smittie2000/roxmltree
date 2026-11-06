@@ -411,6 +411,81 @@ fn entity_resolver_works() {
     );
 }
 
+fn parse_with_external_entity(
+    text: &str,
+    entity: &str,
+    check: impl FnOnce(Result<Document, Error>),
+) {
+    let resolver = |_: Option<&str>, _: &str| Ok(Some(entity));
+    let opt = roxmltree::ParsingOptions {
+        allow_dtd: true,
+        entity_resolver: Some(&resolver),
+        ..Default::default()
+    };
+    check(Document::parse_with_options(text, opt));
+}
+
+fn with_external_entity(entity: &str, check: impl FnOnce(&Document)) {
+    let text = "<!DOCTYPE r [<!ENTITY e SYSTEM 'e.xml'>]><r>&e;</r>";
+    parse_with_external_entity(text, entity, |doc| check(&doc.unwrap()));
+}
+
+#[test]
+fn external_entity_text_is_normalized_from_the_entity() {
+    for (entity, expected) in [("x\r\ny", "x\ny"), ("x\ry", "x\ny"), ("x&amp;y", "x&y")] {
+        with_external_entity(entity, |doc| {
+            assert_eq!(doc.root_element().text(), Some(expected));
+        });
+    }
+}
+
+#[test]
+fn external_entity_attribute_is_normalized_from_the_entity() {
+    // Longer than the document, so reading it from the document would go
+    // past its end.
+    let b = "b".repeat(100);
+    with_external_entity(&format!("<a v='\t{b}&amp;'/>"), |doc| {
+        let a = doc.root_element().first_child().unwrap();
+        assert_eq!(a.attribute("v"), Some(format!(" {b}&").as_str()));
+    });
+}
+
+#[test]
+fn external_entity_character_references_are_kept() {
+    // As if the entity's content were written in the document.
+    with_external_entity("a&#13;b", |doc| {
+        assert_eq!(doc.root_element().text(), Some("a\rb"));
+    });
+    for (value, expected) in [("x&#9;y", "x\ty"), ("&lt;", "<"), ("&#60;", "<")] {
+        with_external_entity(&format!("<a v='{value}'/>"), |doc| {
+            let a = doc.root_element().first_child().unwrap();
+            assert_eq!(a.attribute("v"), Some(expected));
+        });
+    }
+}
+
+#[test]
+fn external_entity_error_positions() {
+    // Positions are in the entity's text. Read from the document, the same
+    // offsets would fall inside a multibyte character.
+    let text = "<!DOCTYPE r [<!ENTITY e SYSTEM 'éééééééééé'>]><r>&e;</r>";
+    let spaces = " ".repeat(33);
+    let entity = format!("<a{spaces}xmlns:xml='x'/>");
+    parse_with_external_entity(text, &entity, |doc| {
+        assert_eq!(
+            doc.unwrap_err(),
+            Error::InvalidXmlPrefixUri(TextPos::new(1, 36))
+        );
+    });
+    let entity = format!("<a{spaces}b='1' b='2'/>");
+    parse_with_external_entity(text, &entity, |doc| {
+        assert_eq!(
+            doc.unwrap_err(),
+            Error::DuplicatedAttribute("b".to_string(), TextPos::new(1, 42))
+        );
+    });
+}
+
 #[test]
 fn deeply_nested_elements() {
     const DEPTH: usize = 200_000;
