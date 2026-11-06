@@ -601,6 +601,26 @@ fn crlf_indentation_is_borrowed() {
 }
 
 #[test]
+fn attribute_value_whitespace() {
+    for (value, expected) in [
+        ("a\r", "a "),
+        ("\r\r\n", "  "),
+        ("\n\r", "  "),
+        ("\tx\ty", " x y"),
+        ("a\r&#10;b", "a \nb"),
+        ("&#13;&#10;", "\r\n"),
+    ] {
+        let text = format!("<a v='{value}'/>");
+        let doc = Document::parse(&text).unwrap();
+        assert_eq!(
+            doc.root_element().attribute("v"),
+            Some(expected),
+            "{value:?}"
+        );
+    }
+}
+
+#[test]
 fn duplicated_default_namespace() {
     let err = Document::parse("<e xmlns='a' xmlns='b'/>").unwrap_err();
     assert_eq!(err, Error::DuplicatedNamespace(String::new(), TextPos::new(1, 14)));

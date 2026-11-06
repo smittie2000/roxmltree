@@ -958,6 +958,14 @@ impl<'input> Stream<'input> {
         }
     }
 
+    /// Skips everything before the first `needle1` or `needle2`, or up to the end.
+    #[inline]
+    pub fn skip_until2(&mut self, needle1: u8, needle2: u8) {
+        let rest = self.as_bytes();
+        let len = memchr2(needle1, needle2, rest).unwrap_or(rest.len());
+        self.advance(len);
+    }
+
     #[inline]
     fn chars(&self) -> str::Chars<'input> {
         self.span.as_str()[self.pos..self.end].chars()

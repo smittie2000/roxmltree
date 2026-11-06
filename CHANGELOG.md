@@ -6,7 +6,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Changed
-- Faster parsing of text, comments, CDATA and processing instructions.
+- Faster parsing of text, comments, CDATA, processing instructions and attribute
+  values.
 - Text without references whose only `\r` is a leading `\r\n`, such as indentation
   in files with Windows line ends, is borrowed from the input instead of copied.
   `Node::text_storage` returns `StringStorage::Borrowed` for it now.

@@ -1267,7 +1267,16 @@ fn normalize_attribute<'input>(
 ) -> Result<StringStorage<'input>> {
     // We assume that `&` indicates an entity or a character reference.
     // But in rare cases it can be just an another character.
-    if memchr2(b'&', b'\t', text.as_str().as_bytes()).is_some() || memchr2(b'\n', b'\r', text.as_str().as_bytes()).is_some() {
+    //
+    // This is the value as written in the start tag, which the tokenizer has
+    // already checked, so a byte below 0x20 is a tab, newline or `\r`. One
+    // pass over the short value is cheaper than two searches.
+    let needs_normalizing = text
+        .as_str()
+        .as_bytes()
+        .iter()
+        .fold(false, |any, &b| any | (b == b'&') | (b < 0x20));
+    if needs_normalizing {
         let mut text_buffer = TextBuffer::new();
         _normalize_attribute(text, &mut text_buffer, ctx)?;
         Ok(StringStorage::new_owned(&text_buffer.finish()))
@@ -1278,13 +1287,22 @@ fn normalize_attribute<'input>(
 
 fn _normalize_attribute(text: StrSpan, buffer: &mut TextBuffer, ctx: &mut Context) -> Result<()> {
     let mut stream = Stream::from_substr(ctx.text, text.range());
-    while !stream.at_end() {
-        // Safe, because we already checked that the stream is not at the end.
-        let c = stream.curr_byte_unchecked();
+    loop {
+        // Copy everything up to the next `&` or `\r` at once.
+        let start = stream.pos();
+        stream.skip_until2(b'&', b'\r');
+        buffer.push_from_attr(&ctx.text.as_bytes()[start..stream.pos()]);
 
-        if c != b'&' {
+        if stream.at_end() {
+            break;
+        }
+
+        // `\r\n` becomes one space, as does a `\r` on its own.
+        if stream.curr_byte_unchecked() == b'\r' {
             stream.advance(1);
-            buffer.push_from_attr(c, stream.curr_byte().ok());
+            if stream.curr_byte().ok() != Some(b'\n') {
+                buffer.push_raw(b' ');
+            }
             continue;
         }
 
@@ -1304,7 +1322,7 @@ fn _normalize_attribute(text: StrSpan, buffer: &mut TextBuffer, ctx: &mut Contex
                             ));
                         }
 
-                        buffer.push_from_attr(b, None);
+                        buffer.push_from_attr(&[b]);
                     } else {
                         // Characters not from entity should be added as is.
                         // Not sure why... At least `lxml` produces the same results.
@@ -1443,19 +1461,12 @@ impl TextBuffer {
         self.buffer.push(c);
     }
 
-    fn push_from_attr(&mut self, mut current: u8, next: Option<u8>) {
-        // \r in \r\n should be ignored.
-        if current == b'\r' && next == Some(b'\n') {
-            return;
-        }
-
-        // \n, \r and \t should be converted into spaces.
-        current = match current {
+    // \n, \r and \t should be converted into spaces.
+    fn push_from_attr(&mut self, bytes: &[u8]) {
+        self.buffer.extend(bytes.iter().map(|&b| match b {
             b'\n' | b'\r' | b'\t' => b' ',
-            _ => current,
-        };
-
-        self.buffer.push(current);
+            _ => b,
+        }));
     }
 
     // Translate \r\n and any \r that is not followed by \n into a single \n character.
