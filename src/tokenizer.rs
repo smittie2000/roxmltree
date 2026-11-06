@@ -737,14 +737,32 @@ fn parse_close_element<'input>(
 
 fn parse_text<'input>(s: &mut Stream<'input>, events: &mut impl XmlEvents<'input>) -> Result<()> {
     let start = s.pos();
-    let text = s.consume_until(b"<")?;
+    let text = s.skip_until(b"<");
 
-    // According to the spec, `]]>` must not appear inside a Text node.
-    // https://www.w3.org/TR/xml/#syntax
-    //
-    // Search for `>` first, since it's a bit faster than looking for `]]>`.
-    if text.contains('>') && text.contains("]]>") {
-        return Err(Error::InvalidCharacterData(s.gen_text_pos()));
+    // Most text is printable ASCII and whitespace without a `>`, and one pass
+    // can tell: then it is all XML characters and can't contain `]]>`. Other
+    // text gets both checks in full.
+    let plain = text.as_bytes().iter().fold(true, |ok, b| {
+        ok & b.is_ascii() & b.is_xml_char() & (*b != b'>')
+    });
+    if !plain {
+        // ASCII text failed the fold only for a `>`, which is_xml_str's ASCII
+        // pass accepts, or a control character, which is an error. Other text
+        // needs the char loop, and repeating the ASCII pass first would only
+        // cost time.
+        if text.is_ascii() {
+            is_xml_str(text, start, s)?;
+        } else {
+            is_xml_str_unicode(text, start, s)?;
+        }
+
+        // According to the spec, `]]>` must not appear inside a Text node.
+        // https://www.w3.org/TR/xml/#syntax
+        //
+        // Most of this text has no `>` at all, and `>` is faster to find.
+        if text.contains('>') && text.contains("]]>") {
+            return Err(Error::InvalidCharacterData(s.gen_text_pos()));
+        }
     }
 
     let range = s.range_from(start);
@@ -915,6 +933,15 @@ impl<'input> Stream<'input> {
     #[inline]
     fn consume_until(&mut self, needle: &[u8]) -> Result<&'input str> {
         let start = self.pos;
+        let text = self.skip_until(needle);
+        is_xml_str(text, start, self)?;
+        Ok(text)
+    }
+
+    /// Like `consume_until`, but leaves checking the characters to the caller.
+    #[inline]
+    fn skip_until(&mut self, needle: &[u8]) -> &'input str {
+        let start = self.pos;
         let rest = self.as_bytes();
         let mut len = 0;
         loop {
@@ -931,9 +958,8 @@ impl<'input> Stream<'input> {
             }
         }
         let text = self.span.slice_region(start, start + len);
-        is_xml_str(text, start, self)?;
         self.advance(len);
-        Ok(text)
+        text
     }
 
     #[inline]
