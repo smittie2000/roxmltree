@@ -737,14 +737,30 @@ fn parse_close_element<'input>(
 
 fn parse_text<'input>(s: &mut Stream<'input>, events: &mut impl XmlEvents<'input>) -> Result<()> {
     let start = s.pos();
-    let text = s.consume_until(b"<")?;
+    s.skip_until(b"<");
+    let text = s.slice_back(start);
 
-    // According to the spec, `]]>` must not appear inside a Text node.
-    // https://www.w3.org/TR/xml/#syntax
-    //
-    // Search for `>` first, since it's a bit faster than looking for `]]>`.
-    if text.contains('>') && text.contains("]]>") {
-        return Err(Error::InvalidCharacterData(s.gen_text_pos()));
+    // Most text is ASCII XML characters other than `>`, and one pass can
+    // tell: then it can't contain `]]>` either. Other text gets both checks
+    // in full.
+    let plain = text.as_bytes().iter().fold(true, |ok, b| {
+        ok & b.is_ascii() & b.is_xml_char() & (*b != b'>')
+    });
+    if !plain {
+        // Non-ASCII text needs the char loop anyway, so skip the ASCII pass.
+        if text.is_ascii() {
+            is_xml_str(text, start, s)?;
+        } else {
+            is_xml_str_unicode(text, start, s)?;
+        }
+
+        // According to the spec, `]]>` must not appear inside a Text node.
+        // https://www.w3.org/TR/xml/#syntax
+        //
+        // Most of this text has no `>` at all, and `>` is faster to find.
+        if text.contains('>') && text.contains("]]>") {
+            return Err(Error::InvalidCharacterData(s.gen_text_pos()));
+        }
     }
 
     let range = s.range_from(start);

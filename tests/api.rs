@@ -533,6 +533,34 @@ fn unterminated_markup() {
 }
 
 #[test]
+fn cdata_end_in_text() {
+    let err = |text| Document::parse(text).unwrap_err();
+    assert_eq!(
+        err("<a>]]></a>"),
+        Error::InvalidCharacterData(TextPos::new(1, 7))
+    );
+    assert_eq!(
+        err("<a>é]]>x</a>"),
+        Error::InvalidCharacterData(TextPos::new(1, 9))
+    );
+    assert_eq!(
+        err("<a>\u{FFFE}]]></a>"),
+        Error::NonXmlChar('\u{FFFE}', TextPos::new(1, 4))
+    );
+    let doc = Document::parse("<a>a>b]]</a>").unwrap();
+    assert_eq!(doc.root_element().text(), Some("a>b]]"));
+    // Non-ASCII text without a `>` is still checked.
+    assert_eq!(
+        err("<a>\u{FFFE}</a>"),
+        Error::NonXmlChar('\u{FFFE}', TextPos::new(1, 4))
+    );
+    assert_eq!(
+        err("<a>x\u{FFFF}</a>"),
+        Error::NonXmlChar('\u{FFFF}', TextPos::new(1, 5))
+    );
+}
+
+#[test]
 fn duplicated_default_namespace() {
     let err = Document::parse("<e xmlns='a' xmlns='b'/>").unwrap_err();
     assert_eq!(err, Error::DuplicatedNamespace(String::new(), TextPos::new(1, 14)));
