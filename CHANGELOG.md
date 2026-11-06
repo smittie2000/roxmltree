@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   line ends, is borrowed from the input instead of copied. `Node::text_storage`
   returns `StringStorage::Borrowed` for it now.
 - Attribute values that need normalizing are copied a run at a time.
+- Attribute values are checked for references and whitespace in one pass.
 
 ### Fixed
 - Reject an element with more than `u16::MAX` attributes. Duplicate-attribute

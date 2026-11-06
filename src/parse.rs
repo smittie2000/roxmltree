@@ -1266,7 +1266,17 @@ fn normalize_attribute<'input>(
 ) -> Result<StringStorage<'input>> {
     // We assume that `&` indicates an entity or a character reference.
     // But in rare cases it can be just an another character.
-    if memchr2(b'&', b'\t', text.as_str().as_bytes()).is_some() || memchr2(b'\n', b'\r', text.as_str().as_bytes()).is_some() {
+    //
+    // This is the value as written in the start tag, which the tokenizer has
+    // already checked, so a byte below 0x20 is a tab, newline or `\r`. (Entity
+    // text that `_normalize_attribute` expands is never checked here.) One
+    // pass over the short value is cheaper than two searches.
+    let needs_work = text
+        .as_str()
+        .as_bytes()
+        .iter()
+        .fold(false, |any, &b| any | (b == b'&') | (b < 0x20));
+    if needs_work {
         let mut text_buffer = TextBuffer::new();
         _normalize_attribute(ctx.text, text, &mut text_buffer, ctx)?;
         Ok(StringStorage::new_owned(&text_buffer.finish()))
