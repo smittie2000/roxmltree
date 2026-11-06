@@ -1089,10 +1089,14 @@ fn process_text<'input>(
     range: Range<usize>,
     ctx: &mut Context<'input>,
 ) -> Result<()> {
-    // Add text as is if it has only valid characters.
-    if memchr2(b'&', b'\r', text.as_bytes()).is_none() {
-        ctx.append_text(Cow::Borrowed(text), range)?;
-        return Ok(());
+    // Add text as is if it has nothing to change, and normalize only line
+    // ends if it has no references.
+    match memchr2(b'&', b'\r', text.as_bytes()) {
+        None => return ctx.append_text(Cow::Borrowed(text), range),
+        Some(i) if memchr(b'&', &text.as_bytes()[i..]).is_none() => {
+            return ctx.append_text(normalize_line_ends(text), range);
+        }
+        Some(_) => {}
     }
 
     let mut text_buffer = TextBuffer::new();
@@ -1159,19 +1163,23 @@ fn process_text<'input>(
 // While the whole purpose of CDATA is to indicate to an XML library that this text
 // has to be stored as is, carriage return (`\r`) is still has to be replaced with `\n`.
 fn process_cdata<'input>(
-    mut text: &'input str,
+    text: &'input str,
     range: Range<usize>,
     ctx: &mut Context<'input>,
 ) -> Result<()> {
-    let mut pos = memchr(b'\r', text.as_bytes());
+    ctx.append_text(normalize_line_ends(text), range)
+}
 
-    // Add text as is if it has only valid characters.
+/// Translates `\r\n`, and any `\r` not followed by `\n`, into `\n`.
+///
+/// <https://www.w3.org/TR/xml/#sec-line-ends>
+fn normalize_line_ends(mut text: &str) -> Cow<'_, str> {
+    let mut pos = memchr(b'\r', text.as_bytes());
     if pos.is_none() {
-        ctx.append_text(Cow::Borrowed(text), range)?;
-        return Ok(());
+        return Cow::Borrowed(text);
     }
 
-    let mut buf = String::new();
+    let mut buf = String::with_capacity(text.len());
 
     while let Some(pos1) = pos {
         let (line, rest) = text.split_at(pos1);
@@ -1189,9 +1197,7 @@ fn process_cdata<'input>(
     }
 
     buf.push_str(text);
-
-    ctx.append_text(Cow::Owned(buf), range)?;
-    Ok(())
+    Cow::Owned(buf)
 }
 
 enum NextChunk<'a> {

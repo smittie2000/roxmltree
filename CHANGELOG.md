@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - The ends of text, comments, CDATA and processing instructions are found with
   `memchr`, and the skipped text is checked once, instead of one `char` at a time.
 - Most text is checked for XML characters and `]]>` in one pass.
+- Line ends in text without references are normalized a run at a time, as in CDATA.
 
 ### Fixed
 - Reject an element with more than `u16::MAX` attributes. Duplicate-attribute
