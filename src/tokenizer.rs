@@ -826,7 +826,7 @@ impl<'input> Stream<'input> {
     }
 
     #[inline]
-    fn as_bytes(&self) -> &[u8] {
+    pub fn as_bytes(&self) -> &[u8] {
         &self.span.text.as_bytes()[self.pos..self.end]
     }
 

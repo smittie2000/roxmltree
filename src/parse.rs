@@ -1062,10 +1062,14 @@ fn process_text<'input>(
     range: Range<usize>,
     ctx: &mut Context<'input>,
 ) -> Result<()> {
-    // Add text as is if it has only valid characters.
-    if memchr2(b'&', b'\r', text.as_bytes()).is_none() {
-        ctx.append_text(Cow::Borrowed(text), range)?;
-        return Ok(());
+    // Add text as is if it has nothing to change, and normalize only line
+    // ends if it has no references.
+    match memchr2(b'&', b'\r', text.as_bytes()) {
+        None => return ctx.append_text(Cow::Borrowed(text), range),
+        Some(i) if memchr(b'&', &text.as_bytes()[i..]).is_none() => {
+            return ctx.append_text(normalize_line_ends(text), range);
+        }
+        Some(_) => {}
     }
 
     let mut text_buffer = TextBuffer::new();
@@ -1131,19 +1135,23 @@ fn process_text<'input>(
 // While the whole purpose of CDATA is to indicate to an XML library that this text
 // has to be stored as is, carriage return (`\r`) is still has to be replaced with `\n`.
 fn process_cdata<'input>(
-    mut text: &'input str,
+    text: &'input str,
     range: Range<usize>,
     ctx: &mut Context<'input>,
 ) -> Result<()> {
-    let mut pos = memchr(b'\r', text.as_bytes());
+    ctx.append_text(normalize_line_ends(text), range)
+}
 
-    // Add text as is if it has only valid characters.
+/// Translates `\r\n`, and any `\r` not followed by `\n`, into `\n`.
+///
+/// <https://www.w3.org/TR/xml/#sec-line-ends>
+fn normalize_line_ends(mut text: &str) -> Cow<'_, str> {
+    let mut pos = memchr(b'\r', text.as_bytes());
     if pos.is_none() {
-        ctx.append_text(Cow::Borrowed(text), range)?;
-        return Ok(());
+        return Cow::Borrowed(text);
     }
 
-    let mut buf = String::new();
+    let mut buf = String::with_capacity(text.len());
 
     while let Some(pos1) = pos {
         let (line, rest) = text.split_at(pos1);
@@ -1161,9 +1169,7 @@ fn process_cdata<'input>(
     }
 
     buf.push_str(text);
-
-    ctx.append_text(Cow::Owned(buf), range)?;
-    Ok(())
+    Cow::Owned(buf)
 }
 
 enum NextChunk<'a> {
@@ -1221,13 +1227,23 @@ fn normalize_attribute<'input>(
 
 fn _normalize_attribute(text: StrSpan, buffer: &mut TextBuffer, ctx: &mut Context) -> Result<()> {
     let mut stream = Stream::from_substr(ctx.doc.text, text.range());
-    while !stream.at_end() {
-        // Safe, because we already checked that the stream is not at the end.
-        let c = stream.curr_byte_unchecked();
+    loop {
+        // Copy everything up to the next `&` or `\r` at once.
+        let rest = stream.as_bytes();
+        let len = memchr2(b'&', b'\r', rest).unwrap_or(rest.len());
+        buffer.push_attr_run(&rest[..len]);
+        stream.advance(len);
 
-        if c != b'&' {
+        if stream.at_end() {
+            break;
+        }
+
+        // `\r\n` becomes one space, as does a `\r` on its own.
+        if stream.curr_byte_unchecked() == b'\r' {
             stream.advance(1);
-            buffer.push_from_attr(c, stream.curr_byte().ok());
+            if stream.curr_byte().ok() != Some(b'\n') {
+                buffer.push_raw(b' ');
+            }
             continue;
         }
 
@@ -1377,6 +1393,16 @@ impl TextBuffer {
     #[inline]
     fn push_raw(&mut self, c: u8) {
         self.buffer.push(c);
+    }
+
+    /// Pushes a run of attribute value bytes without `&` or `\r`,
+    /// turning `\n` and `\t` into spaces.
+    #[inline]
+    fn push_attr_run(&mut self, run: &[u8]) {
+        self.buffer.extend(run.iter().map(|&b| match b {
+            b'\n' | b'\t' => b' ',
+            _ => b,
+        }));
     }
 
     fn push_from_attr(&mut self, mut current: u8, next: Option<u8>) {
