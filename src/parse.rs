@@ -1283,13 +1283,23 @@ fn _normalize_attribute(
     ctx: &mut Context,
 ) -> Result<()> {
     let mut stream = Stream::from_substr(source, text.range());
-    while !stream.at_end() {
-        // Safe, because we already checked that the stream is not at the end.
-        let c = stream.curr_byte_unchecked();
+    loop {
+        // Copy everything up to the next `&` or `\r` at once.
+        let rest = stream.as_bytes();
+        let len = memchr2(b'&', b'\r', rest).unwrap_or(rest.len());
+        buffer.push_attr_run(&rest[..len]);
+        stream.advance(len);
 
-        if c != b'&' {
+        if stream.at_end() {
+            break;
+        }
+
+        // `\r\n` becomes one space, as does a `\r` on its own.
+        if stream.curr_byte_unchecked() == b'\r' {
             stream.advance(1);
-            buffer.push_from_attr(c, stream.curr_byte().ok());
+            if stream.curr_byte().ok() != Some(b'\n') {
+                buffer.push_raw(b' ');
+            }
             continue;
         }
 
@@ -1309,7 +1319,7 @@ fn _normalize_attribute(
                             ));
                         }
 
-                        buffer.push_from_attr(b, None);
+                        buffer.push_from_attr(b);
                     } else {
                         // Characters not from entity should be added as is.
                         // Not sure why... At least `lxml` produces the same results.
@@ -1446,12 +1456,18 @@ impl TextBuffer {
         self.buffer.push(c);
     }
 
-    fn push_from_attr(&mut self, mut current: u8, next: Option<u8>) {
-        // \r in \r\n should be ignored.
-        if current == b'\r' && next == Some(b'\n') {
-            return;
-        }
+    /// Pushes a run of attribute value bytes without `&` or `\r`,
+    /// turning `\n` and `\t` into spaces.
+    #[inline]
+    fn push_attr_run(&mut self, run: &[u8]) {
+        self.buffer.extend(run.iter().map(|&b| match b {
+            b'\n' | b'\t' => b' ',
+            _ => b,
+        }));
+    }
 
+    /// Pushes a byte that a character reference in an entity produced.
+    fn push_from_attr(&mut self, mut current: u8) {
         // \n, \r and \t should be converted into spaces.
         current = match current {
             b'\n' | b'\r' | b'\t' => b' ',
