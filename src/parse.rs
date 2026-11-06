@@ -1147,8 +1147,17 @@ fn process_cdata<'input>(
 /// <https://www.w3.org/TR/xml/#sec-line-ends>
 fn normalize_line_ends(mut text: &str) -> Cow<'_, str> {
     let mut pos = memchr(b'\r', text.as_bytes());
-    if pos.is_none() {
-        return Cow::Borrowed(text);
+    match pos {
+        None => return Cow::Borrowed(text),
+        // Indentation in a file with Windows line ends: a leading `\r\n` and no
+        // other `\r` normalizes to the same text without its first byte.
+        Some(0)
+            if text.as_bytes().get(1) == Some(&b'\n')
+                && memchr(b'\r', &text.as_bytes()[2..]).is_none() =>
+        {
+            return Cow::Borrowed(&text[1..]);
+        }
+        Some(_) => {}
     }
 
     let mut buf = String::with_capacity(text.len());
