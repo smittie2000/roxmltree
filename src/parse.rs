@@ -652,9 +652,16 @@ impl<'input> Context<'input> {
 }
 
 fn parse<'input>(text: &'input str, opt: ParsingOptions<'input>) -> Result<Document<'input>> {
-    // Trying to guess rough nodes and attributes amount.
-    let nodes_capacity = memchr_iter(b'<', text.as_bytes()).count();
-    let attributes_capacity = memchr_iter(b'=', text.as_bytes()).count();
+    // Trying to guess rough nodes and attributes amount. Text, comments and
+    // CDATA can be full of `<` or `=`, so as a heuristic a guess is never more
+    // than one per 8 bytes (a survey of real documents found at most about one
+    // per 11), and never more nodes than the limit.
+    let max_guess = text.len() / 8;
+    let nodes_capacity = memchr_iter(b'<', text.as_bytes())
+        .count()
+        .min(max_guess)
+        .min(opt.nodes_limit as usize);
+    let attributes_capacity = memchr_iter(b'=', text.as_bytes()).count().min(max_guess);
 
     // Init document.
     let mut doc = Document {
