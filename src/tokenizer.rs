@@ -2,7 +2,7 @@ use core::ops::Range;
 use core::str;
 use alloc::string::String;
 
-use memchr::memchr2;
+use memchr::{memchr, memchr2};
 
 use crate::{Error, TextPos};
 
@@ -346,7 +346,7 @@ fn parse_declaration(s: &mut Stream) -> Result<()> {
 fn parse_comment<'input>(s: &mut Stream<'input>, events: &mut impl XmlEvents<'input>) -> Result<()> {
     let start = s.pos();
     s.advance(4);
-    let text = s.consume_chars(|s, c| !(c == '-' && s.starts_with(b"-->")))?;
+    let text = s.consume_until(b"-->")?;
     s.skip_string(b"-->")?;
 
     if text.contains("--") {
@@ -374,7 +374,7 @@ fn parse_pi<'input>(s: &mut Stream<'input>, events: &mut impl XmlEvents<'input>)
     s.advance(2);
     let target = s.consume_name()?;
     s.skip_spaces();
-    let content = s.consume_chars(|s, c| !(c == '?' && s.starts_with(b"?>")))?;
+    let content = s.consume_until(b"?>")?;
     let content = if !content.is_empty() {
         Some(content)
     } else {
@@ -708,7 +708,7 @@ pub fn parse_content<'input>(
 fn parse_cdata<'input>(s: &mut Stream<'input>, events: &mut impl XmlEvents<'input>) -> Result<()> {
     let start = s.pos();
     s.advance(9); // <![CDATA[
-    let text = s.consume_chars(|s, c| !(c == ']' && s.starts_with(b"]]>")))?;
+    let text = s.consume_until(b"]]>")?;
     s.skip_string(b"]]>")?;
     let range = s.range_from(start);
     events.token(Token::Cdata(text, range))?;
@@ -737,7 +737,7 @@ fn parse_close_element<'input>(
 
 fn parse_text<'input>(s: &mut Stream<'input>, events: &mut impl XmlEvents<'input>) -> Result<()> {
     let start = s.pos();
-    let text = s.consume_chars(|_, c| c != '<')?;
+    let text = s.consume_until(b"<")?;
 
     // According to the spec, `]]>` must not appear inside a Text node.
     // https://www.w3.org/TR/xml/#syntax
@@ -890,16 +890,6 @@ impl<'input> Stream<'input> {
     }
 
     #[inline]
-    fn consume_chars<F>(&mut self, f: F) -> Result<&'input str>
-    where
-        F: Fn(&Stream, char) -> bool,
-    {
-        let start = self.pos;
-        self.skip_chars(f)?;
-        Ok(self.slice_back(start))
-    }
-
-    #[inline]
     fn skip_chars<F>(&mut self, f: F) -> Result<()>
     where
         F: Fn(&Stream, char) -> bool,
@@ -915,6 +905,35 @@ impl<'input> Stream<'input> {
         }
 
         Ok(())
+    }
+
+    /// Consumes everything before the first `needle`, or up to the end,
+    /// checking that it is all XML characters.
+    ///
+    /// Finding the end first and checking the slice after is much faster
+    /// than decoding and checking one `char` at a time.
+    #[inline]
+    fn consume_until(&mut self, needle: &[u8]) -> Result<&'input str> {
+        let start = self.pos;
+        let rest = self.as_bytes();
+        let mut len = 0;
+        loop {
+            match memchr(needle[0], &rest[len..]) {
+                Some(i) if rest[len + i..].starts_with(needle) => {
+                    len += i;
+                    break;
+                }
+                Some(i) => len += i + 1,
+                None => {
+                    len = rest.len();
+                    break;
+                }
+            }
+        }
+        let text = self.span.slice_region(start, start + len);
+        is_xml_str(text, start, self)?;
+        self.advance(len);
+        Ok(text)
     }
 
     #[inline]
