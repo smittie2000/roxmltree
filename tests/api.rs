@@ -512,6 +512,27 @@ fn empty_dtd_is_rejected_by_default() {
 }
 
 #[test]
+fn non_xml_char_positions_after_multibyte_text() {
+    let pos = |text| match Document::parse(text).unwrap_err() {
+        Error::NonXmlChar('\u{1}', pos) => (pos.row, pos.col),
+        e => panic!("{e:?}"),
+    };
+    assert_eq!(pos("<a><!-- ééé\u{1} --></a>"), (1, 12));
+    assert_eq!(pos("<a><?p ééé\u{1}?></a>"), (1, 11));
+    assert_eq!(pos("<a><![CDATA[ééé\u{1}]]></a>"), (1, 16));
+    assert_eq!(pos("<a>ééé\u{1}</a>"), (1, 7));
+    assert_eq!(pos("<a>x\u{1}"), (1, 5));
+}
+
+#[test]
+fn unterminated_markup() {
+    let err = |text| Document::parse(text).unwrap_err().to_string();
+    assert_eq!(err("<a><!-- x"), "expected '-->' at 1:10");
+    assert_eq!(err("<a><?p x"), "expected '?>' at 1:9");
+    assert_eq!(err("<a><![CDATA[x"), "expected ']]>' at 1:14");
+}
+
+#[test]
 fn duplicated_default_namespace() {
     let err = Document::parse("<e xmlns='a' xmlns='b'/>").unwrap_err();
     assert_eq!(err, Error::DuplicatedNamespace(String::new(), TextPos::new(1, 14)));
