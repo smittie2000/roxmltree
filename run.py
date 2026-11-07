@@ -9,7 +9,8 @@ usage (from the kit folder):
     python -I run.py all                                # setup must have run; does the three above in order
 
 Every measurement alternates the builds in shuffled order and keeps the fastest run, so load that
-hits one run doesn't count. base vs baseB is the same build twice (an A/A noise check).
+hits one run doesn't count. It refuses to start on a busy machine, waits for idle before each round,
+and records the load it saw in out/load.json. base vs baseB is the same build twice (an A/A noise check).
 """
 import json
 import os
@@ -20,6 +21,7 @@ import shutil
 import statistics
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 K = Path(__file__).resolve().parent
@@ -44,6 +46,44 @@ REFS = {
 V = list(REFS)
 STEP_PAIRS = ['base:baseB'] + [f'{a}:{b}' for a, b in zip(V, V[1:])] + ['base:rh10', 'base:rh11']
 FILES = sorted(str(p) for p in (K / 'files').iterdir()) + sorted(str(p) for p in (K / 'gen').iterdir())
+
+
+MAX_LOAD = 15  # percent of all cores; the harness itself is single-threaded and not running when sampled
+LOAD = []
+
+
+def cpu_load():
+    """Whole-machine CPU load in percent, sampled while no harness is running."""
+    if os.name == 'nt':
+        r = subprocess.run(['powershell', '-NoProfile', '-Command',
+                            '(Get-CimInstance Win32_Processor | Measure-Object LoadPercentage -Average).Average'],
+                           capture_output=True, text=True)
+        try:
+            return float(r.stdout.strip().replace(',', '.'))
+        except ValueError:
+            return -1.0
+    return 100 * os.getloadavg()[0] / os.cpu_count()
+
+
+def wait_idle(stage, max_wait=600):
+    """Waits up to max_wait seconds for the machine to go idle, and records the load in out/load.json."""
+    start = time.time()
+    load = cpu_load()
+    while load > MAX_LOAD and time.time() - start < max_wait:
+        print(f'{stage}: CPU load {load:.0f}% (over {MAX_LOAD}%), waiting for the machine to go idle', flush=True)
+        time.sleep(15)
+        load = cpu_load()
+    LOAD.append({'stage': stage, 'load_pct': load, 'busy': load > MAX_LOAD})
+    (OUT / 'load.json').write_text(json.dumps(LOAD, indent=1))
+    if load > MAX_LOAD:
+        print(f'WARNING {stage}: still {load:.0f}% busy after {max_wait} s; results from this stage are suspect', flush=True)
+
+
+def preflight():
+    load = cpu_load()
+    if load > MAX_LOAD and os.environ.get('KIT_IGNORE_LOAD') != '1':
+        sys.exit(f'CPU load is {load:.0f}% before starting (limit {MAX_LOAD}%). Something else is running '
+                 '(a build, a sync, BOINC or similar). Stop it, or set KIT_IGNORE_LOAD=1 to run anyway.')
 
 
 def sh(cmd, **kw):
@@ -129,6 +169,7 @@ def bench(rounds):
     times = {v: {} for v in builds}
     mem = {v: {} for v in builds}
     for rnd in range(rounds):
+        wait_idle(f'bench round {rnd + 1}')
         order = builds[:]
         random.shuffle(order)
         for v in order:
@@ -147,7 +188,8 @@ def bench(rounds):
 
 def downstream(rounds):
     ds = {v: {} for v in V}
-    for _ in range(rounds):
+    for rnd in range(rounds):
+        wait_idle(f'downstream round {rnd + 1}')
         order = V[:]
         random.shuffle(order)
         for v in order:
@@ -173,6 +215,7 @@ def cargo(max_rounds):
         sh(['cargo', 'bench', '--no-run', '-q'], cwd=WT / v / 'benches',
            env={**os.environ, 'CARGO_TARGET_DIR': str(K / 'cbt' / v)})
     for rnd in range(max_rounds):
+        wait_idle(f'cargo round {rnd + 1}')
         order = V[:]
         random.shuffle(order)
         for v in order:
@@ -197,6 +240,8 @@ def main():
     cmd = sys.argv[1]
     arg = sys.argv[2] if len(sys.argv) > 2 else None
     OUT.mkdir(exist_ok=True)
+    if cmd in ('bench', 'downstream', 'cargo', 'all'):
+        preflight()
     if cmd == 'setup':
         setup(arg)
     elif cmd == 'bench':
