@@ -588,7 +588,9 @@ struct Context<'input> {
     awaiting_subtree: Vec<NodeId>,
     parent_prefixes: Vec<&'input str>,
     entities: Vec<Entity<'input>>,
-    after_text: Vec<Cow<'input, str>>,
+    /// `Some` while the last node is text. Empty until a second piece of the
+    /// same text arrives, then the whole text so far.
+    after_text: Option<String>,
     parent_id: NodeId,
     tag_name: TagNameSpan<'input>,
     loop_detector: LoopDetector,
@@ -647,22 +649,34 @@ impl<'input> Context<'input> {
         text: Cow<'input, str>,
         range: Range<usize>,
     ) -> Result<()> {
-        if self.after_text.is_empty() {
-            let text = match &text {
-                Cow::Borrowed(text) => StringStorage::Borrowed(text),
-                Cow::Owned(text) => StringStorage::new_owned(text.as_str()),
-            };
+        let merged = match &mut self.after_text {
+            Some(merged) => merged,
+            None => {
+                let text = match &text {
+                    Cow::Borrowed(text) => StringStorage::Borrowed(text),
+                    Cow::Owned(text) => StringStorage::new_owned(text.as_str()),
+                };
 
-            self.append_node(NodeKind::Text(text), range)?;
+                self.append_node(NodeKind::Text(text), range)?;
+                self.after_text = Some(String::new());
+                return Ok(());
+            }
+        };
+
+        if merged.is_empty() {
+            match &self.doc.nodes.last().unwrap().kind {
+                NodeKind::Text(first) => merged.push_str(first),
+                _ => unreachable!(),
+            }
         }
 
-        self.after_text.push(text);
+        merged.push_str(&text);
         Ok(())
     }
 
     #[cold]
     #[inline(never)]
-    fn merge_text(&mut self) {
+    fn merge_text(&mut self, merged: &str) {
         let node = &mut self.doc.nodes.last_mut().unwrap();
 
         let text = match &mut node.kind {
@@ -670,20 +684,16 @@ impl<'input> Context<'input> {
             _ => unreachable!(),
         };
 
-        *text = StringStorage::new_owned(&self.after_text.join(""));
+        *text = StringStorage::new_owned(merged);
     }
 
     #[inline]
     fn reset_after_text(&mut self) {
-        if self.after_text.is_empty() {
-            return;
+        if let Some(merged) = self.after_text.take() {
+            if !merged.is_empty() {
+                self.merge_text(&merged);
+            }
         }
-
-        if self.after_text.len() > 1 {
-            self.merge_text();
-        }
-
-        self.after_text.clear();
     }
 }
 
@@ -731,7 +741,7 @@ fn parse<'input>(text: &'input str, opt: ParsingOptions<'input>) -> Result<Docum
         entities: Vec::new(),
         awaiting_subtree: Vec::new(),
         parent_prefixes: vec![""],
-        after_text: Vec::with_capacity(1),
+        after_text: None,
         parent_id: NodeId::new(0),
         tag_name: TagNameSpan::new_null(),
         loop_detector: LoopDetector::default(),
