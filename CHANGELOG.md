@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Text without references whose only `\r` is a leading `\r\n`, such as indentation
   in files with Windows line ends, is borrowed from the input instead of copied.
   `Node::text_storage` returns `StringStorage::Borrowed` for it now.
+- Two nodes are reserved per `<` instead of one, so the node list no longer
+  grows, and is copied, while parsing.
 - Text in more than one piece, such as text around entity references, is merged
   as it is parsed instead of keeping every piece until the end. This lowers peak
   memory; `text.xml` from the benchmarks peaks at 1.3 MB instead of 2.4 MB.
