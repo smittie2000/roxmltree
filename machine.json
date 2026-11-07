@@ -1,0 +1,24 @@
+{
+ "shas": {
+  "base": "71825016da1d8e723240ec6e213787b20c7db39b",
+  "p2": "9c7f00543713b753c7a7b8a48ea00d1c426de913",
+  "rh03": "bc703efc9c26a2d13e8f816b261d49570e0a5167",
+  "rh04": "ec942f99d36da063f9949e58606f14a9814b6465",
+  "rh05": "87cf8765df6ed30b96c1c695131100d8746a9b21",
+  "rh06": "49d0d74f6707cfe61978ca4347cbec388749ad06",
+  "rh07": "10925a80a49c65b3b11c5fb4db27ec2a56b0ab50",
+  "rh08": "c5c0903796395c49ee85b24450921c1fce369e9d",
+  "rh09": "b29c5f35c2f8c8c9a765b3bfb258cd3937a2ab59",
+  "rh10": "e91bf05e60815867d223f9d463bbae07dcdfc8fa",
+  "rh11": "b5a6321a165c7650706f00632a049a01de0ff385"
+ },
+ "rustc": "rustc 1.99.1 (58cf8f9c3 2026-10-13)",
+ "platform": "Windows-11-10.0.26300-SP0",
+ "machine": "AMD64",
+ "processor": "AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD",
+ "cpu_count": 12,
+ "cpu_os": [
+  "AMD Ryzen 5 5500                               ",
+  "Microsoft Windows 11 Enterprise"
+ ]
+}

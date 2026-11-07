@@ -1,0 +1,423 @@
+{
+ "ds": {
+  "base": {
+   "resvg": {
+    "n": 1845,
+    "bytes": 1140792,
+    "errors": 0,
+    "min_ns": 6200144.0
+   },
+   "openvmm": {
+    "n": 6,
+    "bytes": 16050,
+    "errors": 2,
+    "min_ns": 66093.0
+   },
+   "mailrs": {
+    "n": 22,
+    "bytes": 127590,
+    "errors": 0,
+    "min_ns": 449541.0
+   },
+   "dioxus": {
+    "n": 17,
+    "bytes": 299059,
+    "errors": 0,
+    "min_ns": 219724.0
+   },
+   "fontconfig": {
+    "n": 52,
+    "bytes": 100819,
+    "errors": 2,
+    "min_ns": 420951.0
+   },
+   "fontconfig-parser": {
+    "n": 25,
+    "bytes": 69453,
+    "errors": 0,
+    "min_ns": 335849.0
+   }
+  },
+  "p2": {
+   "resvg": {
+    "n": 1845,
+    "bytes": 1140792,
+    "errors": 0,
+    "min_ns": 6022172.0
+   },
+   "openvmm": {
+    "n": 6,
+    "bytes": 16050,
+    "errors": 2,
+    "min_ns": 64736.0
+   },
+   "mailrs": {
+    "n": 22,
+    "bytes": 127590,
+    "errors": 0,
+    "min_ns": 456254.0
+   },
+   "dioxus": {
+    "n": 17,
+    "bytes": 299059,
+    "errors": 0,
+    "min_ns": 212180.0
+   },
+   "fontconfig": {
+    "n": 52,
+    "bytes": 100819,
+    "errors": 2,
+    "min_ns": 437534.0
+   },
+   "fontconfig-parser": {
+    "n": 25,
+    "bytes": 69453,
+    "errors": 0,
+    "min_ns": 337920.0
+   }
+  },
+  "rh03": {
+   "resvg": {
+    "n": 1845,
+    "bytes": 1140792,
+    "errors": 0,
+    "min_ns": 6201912.0
+   },
+   "openvmm": {
+    "n": 6,
+    "bytes": 16050,
+    "errors": 2,
+    "min_ns": 65037.0
+   },
+   "mailrs": {
+    "n": 22,
+    "bytes": 127590,
+    "errors": 0,
+    "min_ns": 447920.0
+   },
+   "dioxus": {
+    "n": 17,
+    "bytes": 299059,
+    "errors": 0,
+    "min_ns": 218062.0
+   },
+   "fontconfig": {
+    "n": 52,
+    "bytes": 100819,
+    "errors": 2,
+    "min_ns": 422299.0
+   },
+   "fontconfig-parser": {
+    "n": 25,
+    "bytes": 69453,
+    "errors": 0,
+    "min_ns": 339138.0
+   }
+  },
+  "rh04": {
+   "resvg": {
+    "n": 1845,
+    "bytes": 1140792,
+    "errors": 0,
+    "min_ns": 6247456.0
+   },
+   "openvmm": {
+    "n": 6,
+    "bytes": 16050,
+    "errors": 2,
+    "min_ns": 65919.0
+   },
+   "mailrs": {
+    "n": 22,
+    "bytes": 127590,
+    "errors": 0,
+    "min_ns": 451654.0
+   },
+   "dioxus": {
+    "n": 17,
+    "bytes": 299059,
+    "errors": 0,
+    "min_ns": 216472.0
+   },
+   "fontconfig": {
+    "n": 52,
+    "bytes": 100819,
+    "errors": 2,
+    "min_ns": 421028.0
+   },
+   "fontconfig-parser": {
+    "n": 25,
+    "bytes": 69453,
+    "errors": 0,
+    "min_ns": 336831.0
+   }
+  },
+  "rh05": {
+   "resvg": {
+    "n": 1845,
+    "bytes": 1140792,
+    "errors": 0,
+    "min_ns": 6248938.0
+   },
+   "openvmm": {
+    "n": 6,
+    "bytes": 16050,
+    "errors": 2,
+    "min_ns": 66703.0
+   },
+   "mailrs": {
+    "n": 22,
+    "bytes": 127590,
+    "errors": 0,
+    "min_ns": 472043.0
+   },
+   "dioxus": {
+    "n": 17,
+    "bytes": 299059,
+    "errors": 0,
+    "min_ns": 162183.0
+   },
+   "fontconfig": {
+    "n": 52,
+    "bytes": 100819,
+    "errors": 2,
+    "min_ns": 443787.0
+   },
+   "fontconfig-parser": {
+    "n": 25,
+    "bytes": 69453,
+    "errors": 0,
+    "min_ns": 364035.0
+   }
+  },
+  "rh06": {
+   "resvg": {
+    "n": 1845,
+    "bytes": 1140792,
+    "errors": 0,
+    "min_ns": 6141097.0
+   },
+   "openvmm": {
+    "n": 6,
+    "bytes": 16050,
+    "errors": 2,
+    "min_ns": 65489.0
+   },
+   "mailrs": {
+    "n": 22,
+    "bytes": 127590,
+    "errors": 0,
+    "min_ns": 463798.0
+   },
+   "dioxus": {
+    "n": 17,
+    "bytes": 299059,
+    "errors": 0,
+    "min_ns": 157303.0
+   },
+   "fontconfig": {
+    "n": 52,
+    "bytes": 100819,
+    "errors": 2,
+    "min_ns": 416926.0
+   },
+   "fontconfig-parser": {
+    "n": 25,
+    "bytes": 69453,
+    "errors": 0,
+    "min_ns": 338028.0
+   }
+  },
+  "rh07": {
+   "resvg": {
+    "n": 1845,
+    "bytes": 1140792,
+    "errors": 0,
+    "min_ns": 6054769.0
+   },
+   "openvmm": {
+    "n": 6,
+    "bytes": 16050,
+    "errors": 2,
+    "min_ns": 65476.0
+   },
+   "mailrs": {
+    "n": 22,
+    "bytes": 127590,
+    "errors": 0,
+    "min_ns": 446144.0
+   },
+   "dioxus": {
+    "n": 17,
+    "bytes": 299059,
+    "errors": 0,
+    "min_ns": 156501.0
+   },
+   "fontconfig": {
+    "n": 52,
+    "bytes": 100819,
+    "errors": 2,
+    "min_ns": 423164.0
+   },
+   "fontconfig-parser": {
+    "n": 25,
+    "bytes": 69453,
+    "errors": 0,
+    "min_ns": 340849.0
+   }
+  },
+  "rh08": {
+   "resvg": {
+    "n": 1845,
+    "bytes": 1140792,
+    "errors": 0,
+    "min_ns": 6198550.0
+   },
+   "openvmm": {
+    "n": 6,
+    "bytes": 16050,
+    "errors": 2,
+    "min_ns": 65315.0
+   },
+   "mailrs": {
+    "n": 22,
+    "bytes": 127590,
+    "errors": 0,
+    "min_ns": 460595.0
+   },
+   "dioxus": {
+    "n": 17,
+    "bytes": 299059,
+    "errors": 0,
+    "min_ns": 161542.0
+   },
+   "fontconfig": {
+    "n": 52,
+    "bytes": 100819,
+    "errors": 2,
+    "min_ns": 419179.0
+   },
+   "fontconfig-parser": {
+    "n": 25,
+    "bytes": 69453,
+    "errors": 0,
+    "min_ns": 336862.0
+   }
+  },
+  "rh09": {
+   "resvg": {
+    "n": 1845,
+    "bytes": 1140792,
+    "errors": 0,
+    "min_ns": 5951128.0
+   },
+   "openvmm": {
+    "n": 6,
+    "bytes": 16050,
+    "errors": 2,
+    "min_ns": 65956.0
+   },
+   "mailrs": {
+    "n": 22,
+    "bytes": 127590,
+    "errors": 0,
+    "min_ns": 456479.0
+   },
+   "dioxus": {
+    "n": 17,
+    "bytes": 299059,
+    "errors": 0,
+    "min_ns": 163436.0
+   },
+   "fontconfig": {
+    "n": 52,
+    "bytes": 100819,
+    "errors": 2,
+    "min_ns": 434872.0
+   },
+   "fontconfig-parser": {
+    "n": 25,
+    "bytes": 69453,
+    "errors": 0,
+    "min_ns": 347255.0
+   }
+  },
+  "rh10": {
+   "resvg": {
+    "n": 1845,
+    "bytes": 1140792,
+    "errors": 0,
+    "min_ns": 5645975.0
+   },
+   "openvmm": {
+    "n": 6,
+    "bytes": 16050,
+    "errors": 2,
+    "min_ns": 62049.0
+   },
+   "mailrs": {
+    "n": 22,
+    "bytes": 127590,
+    "errors": 0,
+    "min_ns": 425547.0
+   },
+   "dioxus": {
+    "n": 17,
+    "bytes": 299059,
+    "errors": 0,
+    "min_ns": 151477.0
+   },
+   "fontconfig": {
+    "n": 52,
+    "bytes": 100819,
+    "errors": 2,
+    "min_ns": 416861.0
+   },
+   "fontconfig-parser": {
+    "n": 25,
+    "bytes": 69453,
+    "errors": 0,
+    "min_ns": 334378.0
+   }
+  },
+  "rh11": {
+   "resvg": {
+    "n": 1845,
+    "bytes": 1140792,
+    "errors": 0,
+    "min_ns": 5805566.0
+   },
+   "openvmm": {
+    "n": 6,
+    "bytes": 16050,
+    "errors": 2,
+    "min_ns": 63728.0
+   },
+   "mailrs": {
+    "n": 22,
+    "bytes": 127590,
+    "errors": 0,
+    "min_ns": 449643.0
+   },
+   "dioxus": {
+    "n": 17,
+    "bytes": 299059,
+    "errors": 0,
+    "min_ns": 161874.0
+   },
+   "fontconfig": {
+    "n": 52,
+    "bytes": 100819,
+    "errors": 2,
+    "min_ns": 421338.0
+   },
+   "fontconfig-parser": {
+    "n": 25,
+    "bytes": 69453,
+    "errors": 0,
+    "min_ns": 341000.0
+   }
+  }
+ },
+ "usvg": {}
+}
