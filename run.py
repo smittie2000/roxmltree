@@ -2,11 +2,11 @@
 
 usage (from the kit folder):
     python -I run.py setup <path to roxmltree clone>   # fetch, worktrees, release builds
-    python -I run.py bench [rounds=9]                   # per-step files: out/bench-min.json
-    python -I run.py totals [rounds=9]                  # master <-> end, both directions: out/bench-totals.json
+    python -I run.py bench [rounds=11]                  # all builds per round: out/bench-min.json (steps)
+                                                        # and out/bench-totals.json (master <-> end)
     python -I run.py downstream [rounds=15]             # dependents' files: out/downstream-steps.json
-    python -I run.py cargo [max_rounds=6]               # cargo bench, filtered: out/cargobench-q.json
-    python -I run.py all                                # setup must have run; does the four above in order
+    python -I run.py cargo [max_rounds=4]               # cargo bench, filtered: out/cargobench-q.json
+    python -I run.py all                                # setup must have run; does the three above in order
 
 Every measurement alternates the builds in shuffled order and keeps the fastest run, so load that
 hits one run doesn't count. base vs baseB is the same build twice (an A/A noise check).
@@ -106,30 +106,42 @@ def run_bm(v):
     return rows
 
 
-def bench(rounds, out_name, pairs):
-    results = {}
-    for pair in pairs:
-        a, b = pair.split(':')
-        times = {a: {}, b: {}}
-        mem = {a: {}, b: {}}
-        for _ in range(rounds):
-            order = [a, b]
-            random.shuffle(order)
-            for v in order:
-                for name, (ns, peak, fin) in run_bm(v).items():
-                    times[v].setdefault(name, []).append(ns)
-                    mem[v][name] = (peak, fin)
-        rows = []
-        for name in sorted(times[a]):
-            ta, tb = min(times[a][name]), min(times[b][name])
-            rows.append({'file': name, 'parent_us': ta / 1000, 'child_us': tb / 1000,
-                         'time_pct': 100 * (tb / ta - 1),
-                         'parent_peak': mem[a][name][0], 'child_peak': mem[b][name][0],
-                         'parent_final': mem[a][name][1], 'child_final': mem[b][name][1]})
-        real = [r for r in rows if not r['file'].startswith('g')]
-        geo = statistics.geometric_mean([r['child_us'] / r['parent_us'] for r in real])
-        results[pair] = {'rows': rows, 'geomean_pct_17': 100 * (geo - 1)}
-        print(f'{pair}: geomean over 17 real files {100 * (geo - 1):+.1f}%', flush=True)
+TOTAL_PAIRS = ['base:rh10', 'rh10:base', 'base:rh11', 'rh11:base']
+
+
+def pair_result(times, mem, a, b):
+    rows = []
+    for name in sorted(times[a]):
+        ta, tb = min(times[a][name]), min(times[b][name])
+        rows.append({'file': name, 'parent_us': ta / 1000, 'child_us': tb / 1000,
+                     'time_pct': 100 * (tb / ta - 1),
+                     'parent_peak': mem[a][name][0], 'child_peak': mem[b][name][0],
+                     'parent_final': mem[a][name][1], 'child_final': mem[b][name][1]})
+    real = [r for r in rows if not r['file'].startswith('g')]
+    geo = statistics.geometric_mean([r['child_us'] / r['parent_us'] for r in real])
+    return {'rows': rows, 'geomean_pct_17': 100 * (geo - 1)}
+
+
+def bench(rounds):
+    # Every round runs all builds (plus baseB) once in shuffled order, so each build is measured
+    # once per round and every pair, step or total, is compared from the same runs.
+    builds = V + ['baseB']
+    times = {v: {} for v in builds}
+    mem = {v: {} for v in builds}
+    for rnd in range(rounds):
+        order = builds[:]
+        random.shuffle(order)
+        for v in order:
+            for name, (ns, peak, fin) in run_bm(v).items():
+                times[v].setdefault(name, []).append(ns)
+                mem[v][name] = (peak, fin)
+        print(f'bench round {rnd + 1}/{rounds} done', flush=True)
+    for out_name, pairs in (('bench-min.json', STEP_PAIRS), ('bench-totals.json', TOTAL_PAIRS)):
+        results = {}
+        for pair in pairs:
+            a, b = pair.split(':')
+            results[pair] = pair_result(times, mem, a, b)
+            print(f'{pair}: geomean over 17 real files {results[pair]["geomean_pct_17"]:+.1f}%', flush=True)
         (OUT / out_name).write_text(json.dumps(results, indent=1))
 
 
@@ -188,18 +200,15 @@ def main():
     if cmd == 'setup':
         setup(arg)
     elif cmd == 'bench':
-        bench(int(arg or 9), 'bench-min.json', STEP_PAIRS)
-    elif cmd == 'totals':
-        bench(int(arg or 9), 'bench-totals.json', ['base:rh10', 'rh10:base', 'base:rh11', 'rh11:base'])
+        bench(int(arg or 11))
     elif cmd == 'downstream':
         downstream(int(arg or 15))
     elif cmd == 'cargo':
-        cargo(int(arg or 6))
+        cargo(int(arg or 4))
     elif cmd == 'all':
-        bench(9, 'bench-min.json', STEP_PAIRS)
-        bench(9, 'bench-totals.json', ['base:rh10', 'rh10:base', 'base:rh11', 'rh11:base'])
+        bench(11)
         downstream(15)
-        cargo(6)
+        cargo(4)
     else:
         sys.exit(__doc__)
 
