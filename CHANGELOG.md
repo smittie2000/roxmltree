@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   `Node::text_storage` returns `StringStorage::Borrowed` for it now.
 - Two nodes are reserved per `<` instead of one, so the node list no longer
   grows, and is copied, while parsing.
+- Attributes take 64 bytes instead of 72 with the `positions` feature. The qname's
+  length is no longer stored: it is the prefix, the namespace's name, plus the local name.
 - Text in more than one piece, such as text around entity references, is merged
   as it is parsed instead of keeping every piece until the end. This lowers peak
   memory; `text.xml` from the benchmarks peaks at 1.3 MB instead of 2.4 MB.

@@ -845,3 +845,26 @@ fn limits_and_other_errors() {
         Error::NamespacesLimitReached
     );
 }
+
+#[cfg(feature = "positions")]
+#[test]
+fn attribute_qname_ranges_with_prefixes() {
+    let data =
+        "<e xmlns:a='u' xmlns:b='u' xmlns:é='v' a:x='1' b:y='2' é:z='3' xml:lang='en' w = '4'/>";
+    let doc = Document::parse(data).unwrap();
+    let ranges: Vec<_> = doc
+        .root_element()
+        .attributes()
+        .map(|a| (&data[a.range_qname()], &data[a.range_value()]))
+        .collect();
+    assert_eq!(
+        ranges,
+        [
+            ("a:x", "1"),
+            ("b:y", "2"),
+            ("é:z", "3"),
+            ("xml:lang", "en"),
+            ("w", "4")
+        ]
+    );
+}
