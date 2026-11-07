@@ -40,11 +40,10 @@ REFS = {
     'rh07': 'rehearsal/07-line-ends',
     'rh08': 'rehearsal/08-borrow-crlf-indentation',
     'rh09': 'rehearsal/09-attribute-runs',
-    'rh10': 'rehearsal/10-attribute-check-once',
-    'rh11': 'rehearsal/11-parsing-options-caps',
+    'rh10': 'rehearsal/10-parsing-options-limits',
 }
 V = list(REFS)
-STEP_PAIRS = ['base:baseB'] + [f'{a}:{b}' for a, b in zip(V, V[1:])] + ['base:rh10', 'base:rh11']
+STEP_PAIRS = ['base:baseB'] + [f'{a}:{b}' for a, b in zip(V, V[1:])] + ['base:rh09', 'base:rh10']
 FILES = sorted(str(p) for p in (K / 'files').iterdir()) + sorted(str(p) for p in (K / 'gen').iterdir())
 
 
@@ -146,7 +145,7 @@ def run_bm(v):
     return rows
 
 
-TOTAL_PAIRS = ['base:rh10', 'rh10:base', 'base:rh11', 'rh11:base']
+TOTAL_PAIRS = ['base:rh09', 'rh09:base', 'base:rh10', 'rh10:base']
 
 
 def pair_result(times, mem, a, b):
