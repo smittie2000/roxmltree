@@ -438,8 +438,6 @@ struct TempAttributeData<'input> {
     value: StringStorage<'input>,
     range: Range<usize>,
     #[cfg(feature = "positions")]
-    qname_len: u32,
-    #[cfg(feature = "positions")]
     eq_len: u32,
 }
 
@@ -900,16 +898,16 @@ fn process_attribute<'input>(
         ctx.check_namespaces_limit()?;
         ctx.doc.namespaces.push_ns(None, value)?;
     } else {
+        // The qname's length is recomputed from the prefix and local name.
+        let _ = qname_len;
         #[cfg(not(feature = "positions"))]
-        let _ = (qname_len, eq_len);
+        let _ = eq_len;
 
         ctx.current_attributes.push(TempAttributeData {
             prefix,
             local,
             value,
             range,
-            #[cfg(feature = "positions")]
-            qname_len,
             #[cfg(feature = "positions")]
             eq_len,
         });
@@ -1131,8 +1129,9 @@ fn resolve_attributes(namespaces: ShortRange, ctx: &mut Context) -> Result<Short
         // so a long namespace URI isn't compared for every pair.
         if !sort_check
             && ctx.doc.attributes[start_idx..].iter().any(|attr| {
-                attr.name.local_name == attr_name.local_name
-                    && attr.name.as_expanded_name(&ctx.doc) == attr_name.as_expanded_name(&ctx.doc)
+                attr.local_name == attr_name.local_name
+                    && attr.name().as_expanded_name(&ctx.doc)
+                        == attr_name.as_expanded_name(&ctx.doc)
             })
         {
             // Not `ctx.text_pos_at`: `attr` borrows `ctx`.
@@ -1142,12 +1141,11 @@ fn resolve_attributes(namespaces: ShortRange, ctx: &mut Context) -> Result<Short
 
         let attr = &mut ctx.current_attributes[i];
         ctx.doc.attributes.push(AttributeData {
-            name: attr_name,
+            namespace_idx: attr_name.namespace_idx,
+            local_name: attr_name.local_name,
             value: replace(&mut attr.value, StringStorage::Borrowed("")),
             #[cfg(feature = "positions")]
             range: attr.range.clone(),
-            #[cfg(feature = "positions")]
-            qname_len: attr.qname_len,
             #[cfg(feature = "positions")]
             eq_len: attr.eq_len,
         });
@@ -1175,7 +1173,7 @@ fn check_duplicates_sorted(
 ) -> Result<()> {
     let names = &doc.attributes[start_idx..start_idx + attrs.len()];
     let key = |i: u32| {
-        let name = names[i as usize].name.as_expanded_name(doc);
+        let name = names[i as usize].name().as_expanded_name(doc);
         (name.name, name.uri)
     };
     let mut order: Vec<u32> = (0..attrs.len() as u32).collect();

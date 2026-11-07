@@ -486,14 +486,25 @@ impl core::ops::Deref for StringStorage<'_> {
 
 #[derive(Clone, Debug)]
 struct AttributeData<'input> {
-    name: ExpandedNameIndexed<'input>,
+    // The name's fields, not an `ExpandedNameIndexed`, so that `eq_len` fits
+    // next to `namespace_idx`.
+    namespace_idx: Option<NamespaceIdx>,
+    local_name: &'input str,
     value: StringStorage<'input>,
     #[cfg(feature = "positions")]
     range: Range<usize>,
     #[cfg(feature = "positions")]
-    qname_len: u32,
-    #[cfg(feature = "positions")]
     eq_len: u32, // includes any surrounding spaces
+}
+
+impl<'input> AttributeData<'input> {
+    #[inline]
+    fn name(&self) -> ExpandedNameIndexed<'input> {
+        ExpandedNameIndexed {
+            namespace_idx: self.namespace_idx,
+            local_name: self.local_name,
+        }
+    }
 }
 
 /// An attribute.
@@ -518,7 +529,7 @@ impl<'a, 'input> Attribute<'a, 'input> {
     /// ```
     #[inline]
     pub fn namespace(&self) -> Option<&'a str> {
-        self.data.name.namespace(self.doc).map(Namespace::uri)
+        self.data.name().namespace(self.doc).map(Namespace::uri)
     }
 
     /// Returns attribute's name.
@@ -535,7 +546,7 @@ impl<'a, 'input> Attribute<'a, 'input> {
     /// ```
     #[inline]
     pub fn name(&self) -> &'input str {
-        self.data.name.local_name
+        self.data.name().local_name
     }
 
     /// Returns attribute's value.
@@ -599,13 +610,20 @@ impl<'a, 'input> Attribute<'a, 'input> {
     ///    ^^^^^^
     /// ```
     ///
-    /// To reduce memory usage the qname length is limited by u32::MAX.
-    /// If the attribute exceeds that limit then the end of the returned range will be incorrect.
     #[cfg(feature = "positions")]
     #[inline]
     pub fn range_qname(&self) -> Range<usize> {
-        let end = self.data.range.start + self.data.qname_len as usize;
+        let end = self.data.range.start + self.qname_len();
         self.data.range.start..end
+    }
+
+    /// The qname's length. An attribute's namespace is the one bound to its
+    /// prefix, so the prefix is the namespace's name.
+    #[cfg(feature = "positions")]
+    #[inline]
+    fn qname_len(&self) -> usize {
+        let prefix = self.data.name().namespace(self.doc).and_then(|ns| ns.name);
+        prefix.map_or(0, |prefix| prefix.len() + 1) + self.data.local_name.len()
     }
 
     /// Returns attribute's value's range in bytes in the original document, excluding the surrounding quotes.
@@ -617,14 +635,13 @@ impl<'a, 'input> Attribute<'a, 'input> {
     ///            ^^^^^
     /// ```
     ///
-    /// To reduce memory usage the qname length is limited by u32::MAX,
-    /// and the number of spaces around the equal sign is limited by u32::MAX.
-    /// If the attribute exceeds those limits then the start of the returned range will be incorrect.
+    /// To reduce memory usage the number of spaces around the equal sign is limited by u32::MAX.
+    /// If the attribute exceeds that limit then the start of the returned range will be incorrect.
     #[cfg(feature = "positions")]
     #[inline]
     pub fn range_value(&self) -> Range<usize> {
         // +1 on start and -1 on end are to exclude the quotes around the value (all valid quotes are 1 byte)
-        let start = self.data.range.start + self.data.qname_len as usize + self.data.eq_len as usize + 1;
+        let start = self.data.range.start + self.qname_len() + self.data.eq_len as usize + 1;
         let end = self.data.range.end - 1;
         start..end
     }
@@ -633,7 +650,7 @@ impl<'a, 'input> Attribute<'a, 'input> {
 impl PartialEq for Attribute<'_, '_> {
     #[inline]
     fn eq(&self, other: &Attribute<'_, '_>) -> bool {
-        self.data.name.as_expanded_name(self.doc) == other.data.name.as_expanded_name(other.doc)
+        self.data.name().as_expanded_name(self.doc) == other.data.name().as_expanded_name(other.doc)
             && self.data.value == other.data.value
     }
 }
@@ -643,7 +660,7 @@ impl fmt::Debug for Attribute<'_, '_> {
         write!(
             f,
             "Attribute {{ name: {:?}, value: {:?} }}",
-            self.data.name.as_expanded_name(self.doc),
+            self.data.name().as_expanded_name(self.doc),
             self.data.value
         )
     }
@@ -1140,8 +1157,8 @@ impl<'a, 'input: 'a> Node<'a, 'input> {
         let name = name.into();
 
         match name.namespace() {
-            Some(_) => self.attributes().find(|a| a.data.name.as_expanded_name(self.doc) == name),
-            None => self.attributes().find(|a| a.data.name.local_name == name.name),
+            Some(_) => self.attributes().find(|a| a.data.name().as_expanded_name(self.doc) == name),
+            None => self.attributes().find(|a| a.data.name().local_name == name.name),
         }
     }
 
