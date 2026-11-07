@@ -20,6 +20,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   it is also raised for `namespaces_limit`.
 
 ### Fixed
+- Checking one element for duplicate attributes took time quadratic in their number:
+  65,000 attributes took 11 s. An element with more than 64 attributes is now checked
+  by sorting.
 - Reject an element with more than `u16::MAX` attributes. Duplicate-attribute
   checks are quadratic, and the previous document-wide `u32` cap did not bound
   a single element.
