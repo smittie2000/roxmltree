@@ -2,7 +2,7 @@ use alloc::string::{String, ToString};
 use alloc::{vec, vec::Vec};
 use alloc::borrow::Cow;
 use core::ops::Range;
-use core::mem::take;
+use core::mem::{replace, take};
 use core::fmt;
 use core::ptr;
 use memchr::{memchr, memchr2, memchr_iter};
@@ -1062,9 +1062,8 @@ fn resolve_attributes(namespaces: ShortRange, ctx: &mut Context) -> Result<Short
         return Ok(ShortRange::new(0, 0));
     }
 
-    // Duplicate-attribute checks are O(n²) in the current element's
-    // attributes, so `attributes_limit` bounds them. The document-wide list
-    // still uses u32.
+    // `attributes_limit` bounds the duplicate-attribute check. The
+    // document-wide list still uses u32.
     if ctx.current_attributes.len() > ctx.opt.attributes_limit as usize
         || ctx.doc.attributes.len() + ctx.current_attributes.len() >= u32::MAX as usize
     {
@@ -1073,7 +1072,12 @@ fn resolve_attributes(namespaces: ShortRange, ctx: &mut Context) -> Result<Short
 
     let start_idx = ctx.doc.attributes.len();
 
-    for attr in ctx.current_attributes.drain(..) {
+    // Comparing each attribute with all before it is quadratic, so a large
+    // element is checked once at the end, by sorting.
+    let sort_check = ctx.current_attributes.len() > SORT_CHECK_MIN;
+
+    for i in 0..ctx.current_attributes.len() {
+        let attr = &ctx.current_attributes[i];
         let namespace_idx = if attr.prefix == NS_XML_PREFIX {
             // The prefix 'xml' is by definition bound to the namespace name
             // http://www.w3.org/XML/1998/namespace. This namespace is added
@@ -1084,13 +1088,27 @@ fn resolve_attributes(namespaces: ShortRange, ctx: &mut Context) -> Result<Short
             // always has no value.'
             None
         } else {
-            get_ns_idx_by_prefix(
+            match get_ns_idx_by_prefix(
                 namespaces,
                 attr.range.start,
                 attr.prefix,
                 &ctx.doc,
                 ctx.text,
-            )?
+            ) {
+                Ok(idx) => idx,
+                Err(e) => {
+                    // A duplicate before this attribute is reported first.
+                    if sort_check {
+                        check_duplicates_sorted(
+                            &ctx.doc,
+                            ctx.text,
+                            start_idx,
+                            &ctx.current_attributes[..i],
+                        )?;
+                    }
+                    return Err(e);
+                }
+            }
         };
 
         let attr_name = ExpandedNameIndexed {
@@ -1100,20 +1118,23 @@ fn resolve_attributes(namespaces: ShortRange, ctx: &mut Context) -> Result<Short
 
         // Check for duplicated attributes. Local names are compared first,
         // so a long namespace URI isn't compared for every pair.
-        if ctx.doc.attributes[start_idx..].iter().any(|attr| {
-            attr.name.local_name == attr_name.local_name
-                && attr.name.as_expanded_name(&ctx.doc) == attr_name.as_expanded_name(&ctx.doc)
-        }) {
-            // Not `ctx.text_pos_at`: `drain` borrows `ctx`.
+        if !sort_check
+            && ctx.doc.attributes[start_idx..].iter().any(|attr| {
+                attr.name.local_name == attr_name.local_name
+                    && attr.name.as_expanded_name(&ctx.doc) == attr_name.as_expanded_name(&ctx.doc)
+            })
+        {
+            // Not `ctx.text_pos_at`: `attr` borrows `ctx`.
             let pos = tokenizer::Stream::new(ctx.text).gen_text_pos_from(attr.range.start);
             return Err(Error::DuplicatedAttribute(attr.local.to_string(), pos));
         }
 
+        let attr = &mut ctx.current_attributes[i];
         ctx.doc.attributes.push(AttributeData {
             name: attr_name,
-            value: attr.value,
+            value: replace(&mut attr.value, StringStorage::Borrowed("")),
             #[cfg(feature = "positions")]
-            range: attr.range,
+            range: attr.range.clone(),
             #[cfg(feature = "positions")]
             qname_len: attr.qname_len,
             #[cfg(feature = "positions")]
@@ -1121,7 +1142,45 @@ fn resolve_attributes(namespaces: ShortRange, ctx: &mut Context) -> Result<Short
         });
     }
 
+    if sort_check {
+        check_duplicates_sorted(&ctx.doc, ctx.text, start_idx, &ctx.current_attributes)?;
+    }
+    ctx.current_attributes.clear();
+
     Ok((start_idx..ctx.doc.attributes.len()).into())
+}
+
+/// Above this many attributes, an element is checked for duplicates by sorting.
+const SORT_CHECK_MIN: usize = 64;
+
+/// Finds the same duplicate as the per-attribute check: the earliest attribute
+/// whose expanded name appeared before it. `attrs` are the element's
+/// attributes as read, already pushed to the document from `start_idx`.
+fn check_duplicates_sorted(
+    doc: &Document,
+    text: &str,
+    start_idx: usize,
+    attrs: &[TempAttributeData],
+) -> Result<()> {
+    let names = &doc.attributes[start_idx..start_idx + attrs.len()];
+    let key = |i: u32| {
+        let name = names[i as usize].name.as_expanded_name(doc);
+        (name.name, name.uri)
+    };
+    let mut order: Vec<u32> = (0..attrs.len() as u32).collect();
+    order.sort_unstable_by(|&a, &b| key(a).cmp(&key(b)).then(a.cmp(&b)));
+    let first = order
+        .windows(2)
+        .filter(|w| key(w[0]) == key(w[1]))
+        .map(|w| w[1] as usize)
+        .min();
+    match first {
+        Some(i) => {
+            let pos = tokenizer::Stream::new(text).gen_text_pos_from(attrs[i].range.start);
+            Err(Error::DuplicatedAttribute(attrs[i].local.to_string(), pos))
+        }
+        None => Ok(()),
+    }
 }
 
 fn process_text<'input>(

@@ -707,6 +707,32 @@ fn duplicated_attributes_with_equal_local_names_are_found() {
     }
 }
 
+#[test]
+fn duplicated_attributes_in_a_large_element() {
+    let attrs: String = (0..100).map(|i| format!(" a{i}='1'")).collect();
+    // The duplicate is reported at its second occurrence, as for small elements.
+    let err = Document::parse(&format!("<e{attrs} a7='2'/>")).unwrap_err();
+    assert_eq!(
+        err,
+        Error::DuplicatedAttribute("a7".into(), TextPos::new(1, 794))
+    );
+    // Two prefixes for one URI.
+    let err = Document::parse(&format!(
+        "<e xmlns:p='u' xmlns:q='u'{attrs} p:x='1' q:x='2'/>"
+    ))
+    .unwrap_err();
+    assert!(matches!(err, Error::DuplicatedAttribute(ref n, _) if n == "x"));
+    // A duplicate before an unknown prefix is reported first.
+    let err = Document::parse(&format!("<e{attrs} a7='2' z:b='3'/>")).unwrap_err();
+    assert!(matches!(err, Error::DuplicatedAttribute(ref n, _) if n == "a7"));
+    // No duplicate: all attributes, in document order.
+    let text = format!("<e{attrs}/>");
+    let doc = Document::parse(&text).unwrap();
+    let names: Vec<_> = doc.root_element().attributes().map(|a| a.name()).collect();
+    assert_eq!(names.len(), 100);
+    assert_eq!((names[0], names[99]), ("a0", "a99"));
+}
+
 fn parse_with_limits(
     text: &str,
     attributes_limit: u16,
