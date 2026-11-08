@@ -1,0 +1,16 @@
+{
+ "shas": {
+  "base": "f9e593987e009443aec2c5dfeaf0f79656c0fdde",
+  "pr2v2": "af536b6d3654b165035f2968209cd2d22bd4407f",
+  "pr2v3": "c98e1fa82d2af89094bc2627d12dd4e4e5faebc1"
+ },
+ "rustc": "rustc 1.99.1 (58cf8f9c3 2026-10-13)",
+ "platform": "Windows-11-10.0.26300-SP0",
+ "machine": "AMD64",
+ "processor": "AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD",
+ "cpu_count": 12,
+ "cpu_os": [
+  "AMD Ryzen 5 5500                               ",
+  "Microsoft Windows 11 Enterprise"
+ ]
+}
