@@ -1,0 +1,532 @@
+{
+ "base:baseB": {
+  "rows": [
+   {
+    "file": "01-attributes.xml",
+    "parent_us": 3305.531,
+    "child_us": 3308.325,
+    "time_pct": 0.08452499764788346,
+    "parent_peak": 1145376,
+    "child_peak": 1145376,
+    "parent_final": 1141794,
+    "child_final": 1141794
+   },
+   {
+    "file": "02-cdata.xml",
+    "parent_us": 170.864,
+    "child_us": 171.96,
+    "time_pct": 0.6414458282610669,
+    "parent_peak": 208288,
+    "child_peak": 208288,
+    "parent_final": 100274,
+    "child_final": 100274
+   },
+   {
+    "file": "03-fonts.conf",
+    "parent_us": 2.732,
+    "child_us": 2.735,
+    "time_pct": 0.10980966325035979,
+    "parent_peak": 5800,
+    "child_peak": 5800,
+    "parent_final": 3066,
+    "child_final": 3066
+   },
+   {
+    "file": "04-gigantic.svg",
+    "parent_us": 266.855,
+    "child_us": 271.102,
+    "time_pct": 1.5915010024170506,
+    "parent_peak": 157144,
+    "child_peak": 157144,
+    "parent_final": 151038,
+    "child_final": 151038
+   },
+   {
+    "file": "05-huge.xml",
+    "parent_us": 3086.156,
+    "child_us": 3068.294,
+    "time_pct": -0.5787782600749969,
+    "parent_peak": 3212272,
+    "child_peak": 3212272,
+    "parent_final": 2315730,
+    "child_final": 2315730
+   },
+   {
+    "file": "06-large.plist",
+    "parent_us": 1793.753,
+    "child_us": 1788.794,
+    "time_pct": -0.2764594679423582,
+    "parent_peak": 2369760,
+    "child_peak": 2369760,
+    "parent_final": 1698466,
+    "child_final": 1698466
+   },
+   {
+    "file": "07-medium.svg",
+    "parent_us": 253.883,
+    "child_us": 254.22,
+    "time_pct": 0.1327383085909739,
+    "parent_peak": 281064,
+    "child_peak": 281064,
+    "parent_final": 270738,
+    "child_final": 270738
+   },
+   {
+    "file": "08-text.xml",
+    "parent_us": 3997.788,
+    "child_us": 3987.019,
+    "time_pct": -0.26937396380197765,
+    "parent_peak": 2444204,
+    "child_peak": 2444204,
+    "parent_final": 639674,
+    "child_final": 639674
+   },
+   {
+    "file": "09-metadata.vlaanderen.be.xml",
+    "parent_us": 13948.3,
+    "child_us": 14014.525,
+    "time_pct": 0.47478904239226516,
+    "parent_peak": 8990408,
+    "child_peak": 8990408,
+    "parent_final": 6881996,
+    "child_final": 6881996
+   },
+   {
+    "file": "10-www.geonames.org_ontology_ontology_v3.3.rdf.rdf",
+    "parent_us": 1829.316,
+    "child_us": 2063.556,
+    "time_pct": 12.804786051179784,
+    "parent_peak": 2153704,
+    "child_peak": 2153704,
+    "parent_final": 1763996,
+    "child_final": 1763996
+   },
+   {
+    "file": "11-slr-canon.xml",
+    "parent_us": 3538.531,
+    "child_us": 3555.556,
+    "time_pct": 0.4811318595202341,
+    "parent_peak": 4427112,
+    "child_peak": 4427112,
+    "parent_final": 4302114,
+    "child_final": 4302114
+   },
+   {
+    "file": "12-fcla-xml-2.30li58.xhtml",
+    "parent_us": 14622.45,
+    "child_us": 14686.7,
+    "time_pct": 0.4393928514031531,
+    "parent_peak": 8860352,
+    "child_peak": 8860352,
+    "parent_final": 7431970,
+    "child_final": 7431970
+   },
+   {
+    "file": "13-FT_G2G_TD01_con_Allegato,_Bonifico_e_Split_Payment.xml",
+    "parent_us": 3475.962,
+    "child_us": 3483.3,
+    "time_pct": 0.21110702591109476,
+    "parent_peak": 34624,
+    "child_peak": 34624,
+    "parent_final": 21774,
+    "child_final": 21774
+   },
+   {
+    "file": "14-catalina-points.kml",
+    "parent_us": 708.352,
+    "child_us": 710.231,
+    "time_pct": 0.2652635977593132,
+    "parent_peak": 1020928,
+    "child_peak": 1020928,
+    "parent_final": 892782,
+    "child_final": 892782
+   },
+   {
+    "file": "15-onvif.xsd",
+    "parent_us": 1585.931,
+    "child_us": 1594.338,
+    "time_pct": 0.5300987243455069,
+    "parent_peak": 3412800,
+    "child_peak": 3412800,
+    "parent_final": 1611254,
+    "child_final": 1611254
+   },
+   {
+    "file": "16-embedded-16bit-png.svg",
+    "parent_us": 40.784,
+    "child_us": 40.838,
+    "time_pct": 0.132404864652802,
+    "parent_peak": 58376,
+    "child_peak": 58376,
+    "parent_final": 24318,
+    "child_final": 24318
+   },
+   {
+    "file": "17-XMP.xmp",
+    "parent_us": 11.364,
+    "child_us": 11.396,
+    "time_pct": 0.2815909890883539,
+    "parent_peak": 18264,
+    "child_peak": 18264,
+    "parent_final": 9890,
+    "child_final": 9890
+   },
+   {
+    "file": "g1-short-nonascii-text.xml",
+    "parent_us": 11444.375,
+    "child_us": 11464.7,
+    "time_pct": 0.1775981650374181,
+    "parent_peak": 14401704,
+    "child_peak": 14401704,
+    "parent_final": 14400186,
+    "child_final": 14400186
+   },
+   {
+    "file": "g2-short-ascii-text.xml",
+    "parent_us": 11364.5,
+    "child_us": 11367.225,
+    "time_pct": 0.023978177658490196,
+    "parent_peak": 14401704,
+    "child_peak": 14401704,
+    "parent_final": 14400186,
+    "child_final": 14400186
+   },
+   {
+    "file": "g3-gt-text.xml",
+    "parent_us": 453.01,
+    "child_us": 454.124,
+    "time_pct": 0.2459106862983118,
+    "parent_peak": 1848,
+    "child_peak": 1848,
+    "parent_final": 258,
+    "child_final": 258
+   },
+   {
+    "file": "g4-crlf-indented.xml",
+    "parent_us": 12786.25,
+    "child_us": 12732.325,
+    "time_pct": -0.42174210577768934,
+    "parent_peak": 12001904,
+    "child_peak": 12001904,
+    "parent_final": 12000282,
+    "child_final": 12000282
+   },
+   {
+    "file": "g5-tab-attributes.xml",
+    "parent_us": 5488.662,
+    "child_us": 5502.038,
+    "time_pct": 0.24370238138182732,
+    "parent_peak": 2842216,
+    "child_peak": 2842216,
+    "parent_final": 2840186,
+    "child_final": 2840186
+   },
+   {
+    "file": "g6-short-attributes.xml",
+    "parent_us": 6227.675,
+    "child_us": 6262.2,
+    "time_pct": 0.5543802462395719,
+    "parent_peak": 8641704,
+    "child_peak": 8641704,
+    "parent_final": 8640186,
+    "child_final": 8640186
+   },
+   {
+    "file": "g7-crlf-kml.kml",
+    "parent_us": 1511.378,
+    "child_us": 1516.759,
+    "time_pct": 0.3560327065763813,
+    "parent_peak": 1282208,
+    "child_peak": 1282208,
+    "parent_final": 1154030,
+    "child_final": 1154030
+   },
+   {
+    "file": "g8-crlf-onvif.xsd",
+    "parent_us": 2728.762,
+    "child_us": 2735.831,
+    "time_pct": 0.25905520525424386,
+    "parent_peak": 3671552,
+    "child_peak": 3671552,
+    "parent_final": 1870046,
+    "child_final": 1870046
+   },
+   {
+    "file": "g9-crlf-xmp.xmp",
+    "parent_us": 15.133,
+    "child_us": 15.251,
+    "time_pct": 0.7797528579924773,
+    "parent_peak": 19112,
+    "child_peak": 19112,
+    "parent_final": 10706,
+    "child_final": 10706
+   }
+  ],
+  "geomean_pct_17": 0.9620782975063857
+ },
+ "base:pr2": {
+  "rows": [
+   {
+    "file": "01-attributes.xml",
+    "parent_us": 3305.531,
+    "child_us": 3278.55,
+    "time_pct": -0.8162379962553645,
+    "parent_peak": 1145376,
+    "child_peak": 1145376,
+    "parent_final": 1141794,
+    "child_final": 1141794
+   },
+   {
+    "file": "02-cdata.xml",
+    "parent_us": 170.864,
+    "child_us": 169.356,
+    "time_pct": -0.8825732746511883,
+    "parent_peak": 208288,
+    "child_peak": 208288,
+    "parent_final": 100274,
+    "child_final": 100274
+   },
+   {
+    "file": "03-fonts.conf",
+    "parent_us": 2.732,
+    "child_us": 2.743,
+    "time_pct": 0.4026354319180081,
+    "parent_peak": 5800,
+    "child_peak": 5800,
+    "parent_final": 3066,
+    "child_final": 3066
+   },
+   {
+    "file": "04-gigantic.svg",
+    "parent_us": 266.855,
+    "child_us": 264.708,
+    "time_pct": -0.8045567817728694,
+    "parent_peak": 157144,
+    "child_peak": 157144,
+    "parent_final": 151038,
+    "child_final": 151038
+   },
+   {
+    "file": "05-huge.xml",
+    "parent_us": 3086.156,
+    "child_us": 3100.9,
+    "time_pct": 0.47774642629860864,
+    "parent_peak": 3212272,
+    "child_peak": 3212272,
+    "parent_final": 2315730,
+    "child_final": 2315730
+   },
+   {
+    "file": "06-large.plist",
+    "parent_us": 1793.753,
+    "child_us": 1784.103,
+    "time_pct": -0.5379781943221862,
+    "parent_peak": 2369760,
+    "child_peak": 2369760,
+    "parent_final": 1698466,
+    "child_final": 1698466
+   },
+   {
+    "file": "07-medium.svg",
+    "parent_us": 253.883,
+    "child_us": 254.408,
+    "time_pct": 0.2067881662025428,
+    "parent_peak": 281064,
+    "child_peak": 281064,
+    "parent_final": 270738,
+    "child_final": 270738
+   },
+   {
+    "file": "08-text.xml",
+    "parent_us": 3997.788,
+    "child_us": 3972.981,
+    "time_pct": -0.6205181465350318,
+    "parent_peak": 2444204,
+    "child_peak": 2444204,
+    "parent_final": 639674,
+    "child_final": 639674
+   },
+   {
+    "file": "09-metadata.vlaanderen.be.xml",
+    "parent_us": 13948.3,
+    "child_us": 14076.05,
+    "time_pct": 0.9158822222062879,
+    "parent_peak": 8990408,
+    "child_peak": 8990408,
+    "parent_final": 6881996,
+    "child_final": 6881996
+   },
+   {
+    "file": "10-www.geonames.org_ontology_ontology_v3.3.rdf.rdf",
+    "parent_us": 1829.316,
+    "child_us": 1824.188,
+    "time_pct": -0.28032335583354495,
+    "parent_peak": 2153704,
+    "child_peak": 2153704,
+    "parent_final": 1763996,
+    "child_final": 1763996
+   },
+   {
+    "file": "11-slr-canon.xml",
+    "parent_us": 3538.531,
+    "child_us": 3558.481,
+    "time_pct": 0.5637932803188583,
+    "parent_peak": 4427112,
+    "child_peak": 4427112,
+    "parent_final": 4302114,
+    "child_final": 4302114
+   },
+   {
+    "file": "12-fcla-xml-2.30li58.xhtml",
+    "parent_us": 14622.45,
+    "child_us": 14674.975,
+    "time_pct": 0.3592079302715989,
+    "parent_peak": 8860352,
+    "child_peak": 8860352,
+    "parent_final": 7431970,
+    "child_final": 7431970
+   },
+   {
+    "file": "13-FT_G2G_TD01_con_Allegato,_Bonifico_e_Split_Payment.xml",
+    "parent_us": 3475.962,
+    "child_us": 3482.688,
+    "time_pct": 0.19350038924477175,
+    "parent_peak": 34624,
+    "child_peak": 34624,
+    "parent_final": 21774,
+    "child_final": 21774
+   },
+   {
+    "file": "14-catalina-points.kml",
+    "parent_us": 708.352,
+    "child_us": 706.62,
+    "time_pct": -0.2445112034694663,
+    "parent_peak": 1020928,
+    "child_peak": 1020928,
+    "parent_final": 892782,
+    "child_final": 892782
+   },
+   {
+    "file": "15-onvif.xsd",
+    "parent_us": 1585.931,
+    "child_us": 1585.675,
+    "time_pct": -0.016141938079272666,
+    "parent_peak": 3412800,
+    "child_peak": 3412800,
+    "parent_final": 1611254,
+    "child_final": 1611254
+   },
+   {
+    "file": "16-embedded-16bit-png.svg",
+    "parent_us": 40.784,
+    "child_us": 40.863,
+    "time_pct": 0.19370341310318562,
+    "parent_peak": 58376,
+    "child_peak": 58376,
+    "parent_final": 24318,
+    "child_final": 24318
+   },
+   {
+    "file": "17-XMP.xmp",
+    "parent_us": 11.364,
+    "child_us": 11.533,
+    "time_pct": 1.4871524111228496,
+    "parent_peak": 18264,
+    "child_peak": 18264,
+    "parent_final": 9890,
+    "child_final": 9890
+   },
+   {
+    "file": "g1-short-nonascii-text.xml",
+    "parent_us": 11444.375,
+    "child_us": 10882.5,
+    "time_pct": -4.909617170007097,
+    "parent_peak": 14401704,
+    "child_peak": 14401704,
+    "parent_final": 14400186,
+    "child_final": 14400186
+   },
+   {
+    "file": "g2-short-ascii-text.xml",
+    "parent_us": 11364.5,
+    "child_us": 10838.825,
+    "time_pct": -4.625588455277397,
+    "parent_peak": 14401704,
+    "child_peak": 14401704,
+    "parent_final": 14400186,
+    "child_final": 14400186
+   },
+   {
+    "file": "g3-gt-text.xml",
+    "parent_us": 453.01,
+    "child_us": 453.633,
+    "time_pct": 0.13752455795676966,
+    "parent_peak": 1848,
+    "child_peak": 1848,
+    "parent_final": 258,
+    "child_final": 258
+   },
+   {
+    "file": "g4-crlf-indented.xml",
+    "parent_us": 12786.25,
+    "child_us": 12677.925,
+    "time_pct": -0.8471991397008494,
+    "parent_peak": 12001904,
+    "child_peak": 12001904,
+    "parent_final": 12000282,
+    "child_final": 12000282
+   },
+   {
+    "file": "g5-tab-attributes.xml",
+    "parent_us": 5488.662,
+    "child_us": 5506.812,
+    "time_pct": 0.33068168526317887,
+    "parent_peak": 2842216,
+    "child_peak": 2842216,
+    "parent_final": 2840186,
+    "child_final": 2840186
+   },
+   {
+    "file": "g6-short-attributes.xml",
+    "parent_us": 6227.675,
+    "child_us": 6148.712,
+    "time_pct": -1.2679370712183946,
+    "parent_peak": 8641704,
+    "child_peak": 8641704,
+    "parent_final": 8640186,
+    "child_final": 8640186
+   },
+   {
+    "file": "g7-crlf-kml.kml",
+    "parent_us": 1511.378,
+    "child_us": 1518.462,
+    "time_pct": 0.4687113349539196,
+    "parent_peak": 1282208,
+    "child_peak": 1282208,
+    "parent_final": 1154030,
+    "child_final": 1154030
+   },
+   {
+    "file": "g8-crlf-onvif.xsd",
+    "parent_us": 2728.762,
+    "child_us": 2711.869,
+    "time_pct": -0.6190719454463256,
+    "parent_peak": 3671552,
+    "child_peak": 3671552,
+    "parent_final": 1870046,
+    "child_final": 1870046
+   },
+   {
+    "file": "g9-crlf-xmp.xmp",
+    "parent_us": 15.133,
+    "child_us": 15.216,
+    "time_pct": 0.5484702306218114,
+    "parent_peak": 19112,
+    "child_peak": 19112,
+    "parent_final": 10706,
+    "child_final": 10706
+   }
+  ],
+  "geomean_pct_17": 0.03312833262651971
+ }
+}
