@@ -1,0 +1,152 @@
+[
+ {
+  "stage": "bench round 1",
+  "load_pct": 3.0,
+  "busy": false
+ },
+ {
+  "stage": "bench round 2",
+  "load_pct": 0.0,
+  "busy": false
+ },
+ {
+  "stage": "bench round 3",
+  "load_pct": 5.0,
+  "busy": false
+ },
+ {
+  "stage": "bench round 4",
+  "load_pct": 1.0,
+  "busy": false
+ },
+ {
+  "stage": "bench round 5",
+  "load_pct": 0.0,
+  "busy": false
+ },
+ {
+  "stage": "bench round 6",
+  "load_pct": 3.0,
+  "busy": false
+ },
+ {
+  "stage": "bench round 7",
+  "load_pct": 3.0,
+  "busy": false
+ },
+ {
+  "stage": "bench round 8",
+  "load_pct": 0.0,
+  "busy": false
+ },
+ {
+  "stage": "bench round 9",
+  "load_pct": 1.0,
+  "busy": false
+ },
+ {
+  "stage": "bench round 10",
+  "load_pct": 1.0,
+  "busy": false
+ },
+ {
+  "stage": "bench round 11",
+  "load_pct": 3.0,
+  "busy": false
+ },
+ {
+  "stage": "downstream round 1",
+  "load_pct": 3.0,
+  "busy": false
+ },
+ {
+  "stage": "downstream round 2",
+  "load_pct": 1.0,
+  "busy": false
+ },
+ {
+  "stage": "downstream round 3",
+  "load_pct": 1.0,
+  "busy": false
+ },
+ {
+  "stage": "downstream round 4",
+  "load_pct": 4.0,
+  "busy": false
+ },
+ {
+  "stage": "downstream round 5",
+  "load_pct": 4.0,
+  "busy": false
+ },
+ {
+  "stage": "downstream round 6",
+  "load_pct": 4.0,
+  "busy": false
+ },
+ {
+  "stage": "downstream round 7",
+  "load_pct": 3.0,
+  "busy": false
+ },
+ {
+  "stage": "downstream round 8",
+  "load_pct": 2.0,
+  "busy": false
+ },
+ {
+  "stage": "downstream round 9",
+  "load_pct": 4.0,
+  "busy": false
+ },
+ {
+  "stage": "downstream round 10",
+  "load_pct": 2.0,
+  "busy": false
+ },
+ {
+  "stage": "downstream round 11",
+  "load_pct": 2.0,
+  "busy": false
+ },
+ {
+  "stage": "downstream round 12",
+  "load_pct": 3.0,
+  "busy": false
+ },
+ {
+  "stage": "downstream round 13",
+  "load_pct": 4.0,
+  "busy": false
+ },
+ {
+  "stage": "downstream round 14",
+  "load_pct": 1.0,
+  "busy": false
+ },
+ {
+  "stage": "downstream round 15",
+  "load_pct": 5.0,
+  "busy": false
+ },
+ {
+  "stage": "cargo round 1",
+  "load_pct": 2.0,
+  "busy": false
+ },
+ {
+  "stage": "cargo round 2",
+  "load_pct": 3.0,
+  "busy": false
+ },
+ {
+  "stage": "cargo round 3",
+  "load_pct": 0.0,
+  "busy": false
+ },
+ {
+  "stage": "cargo round 4",
+  "load_pct": 4.0,
+  "busy": false
+ }
+]
