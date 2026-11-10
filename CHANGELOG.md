@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Fixed
+- A `\r` in text right before or after an entity or character reference was kept
+  instead of being normalized to `\n` (`a\r&#x41;` gave `"a\rA"`, `&#xA;\r` gave `"\n\r"`).
+  Character references themselves are still not normalized (`&#xD;` stays `\r`).
 - Reject an element with more than `u16::MAX` attributes. Duplicate-attribute
   checks are quadratic, and the previous document-wide `u32` cap did not bound
   a single element.
