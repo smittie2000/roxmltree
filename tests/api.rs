@@ -522,3 +522,32 @@ fn duplicated_attributes_with_equal_local_names_are_found() {
         );
     }
 }
+
+// A raw `\r` next to a reference must still be line-end normalized; the character
+// reference itself is not. https://www.w3.org/TR/xml/#sec-line-ends
+#[test]
+fn text_cr_next_to_reference() {
+    for (data, text) in [
+        // `\r` before a character reference
+        ("<e>a\r&#x41;</e>", "a\nA"),
+        ("<e>a\r\n&#x41;</e>", "a\nA"),
+        // `\r` after a character reference
+        ("<e>&#xA;\r</e>", "\n\n"),
+        ("<e>&#x41;\rb</e>", "A\nb"),
+        ("<e>&#x41;\r\nb</e>", "A\nb"),
+        // `\r` around an entity reference
+        ("<!DOCTYPE e [<!ENTITY q 'q'>]><e>\r&q;</e>", "\nq"),
+        ("<!DOCTYPE e [<!ENTITY q 'q'>]><e>&q;\r&q;</e>", "q\nq"),
+        // unchanged: a character reference is kept as is
+        ("<e>&#xD;\nx</e>", "\r\nx"),
+        ("<e>\r&#xD;x</e>", "\n\rx"),
+        ("<e>a\r\nb\rc</e>", "a\nb\nc"),
+    ] {
+        let opt = ParsingOptions {
+            allow_dtd: true,
+            ..ParsingOptions::default()
+        };
+        let doc = Document::parse_with_options(data, opt).unwrap();
+        assert_eq!(doc.root_element().text(), Some(text), "{data:?}");
+    }
+}
