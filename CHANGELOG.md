@@ -26,6 +26,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   the input size.
 - Comment text kept `\r\n` and `\r` as is. Like text and CDATA, they are now
   normalized to `\n`.
+- Parameter entities were resolved by general entity references with the same name:
+  `<!ENTITY % e "...">` made `&e;` valid and could shadow a general entity `e` declared later.
 
 ## [0.21.2] - 2026-10-24
 ### Fixed
