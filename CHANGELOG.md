@@ -24,6 +24,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Comments or CDATA full of `<`, or text full of `=`, made parsing reserve a node
   or attribute slot per input byte up front. The initial guess is now capped by
   the input size.
+- Comment text kept `\r\n` and `\r` as is. Like text and CDATA, they are now
+  normalized to `\n`.
 
 ## [0.21.2] - 2026-10-24
 ### Fixed

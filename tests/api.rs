@@ -437,6 +437,28 @@ fn empty_dtd_is_rejected_by_default() {
 }
 
 #[test]
+fn line_endings_in_text_cdata_and_comments() {
+    for (text, expected) in [
+        ("a\r\nb\rc", "a\nb\nc"),
+        ("x\r", "x\n"),
+        ("\r\r", "\n\n"),
+        ("\r\r\n", "\n\n"),
+        ("\n\r", "\n\n"),
+        ("\r\n\r", "\n\n"),
+    ] {
+        for xml in [
+            format!("<a>{text}</a>"),
+            format!("<a><![CDATA[{text}]]></a>"),
+            format!("<a><!--{text}--></a>"),
+        ] {
+            let doc = Document::parse(&xml).unwrap();
+            let node = doc.root_element().first_child().unwrap();
+            assert_eq!(node.text(), Some(expected), "{xml:?}");
+        }
+    }
+}
+
+#[test]
 fn duplicated_default_namespace() {
     let err = Document::parse("<e xmlns='a' xmlns='b'/>").unwrap_err();
     assert_eq!(err, Error::DuplicatedNamespace(String::new(), TextPos::new(1, 14)));
