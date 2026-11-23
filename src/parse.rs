@@ -612,12 +612,7 @@ impl<'input> Context<'input> {
         range: Range<usize>,
     ) -> Result<()> {
         if self.after_text.is_empty() {
-            let text = match &text {
-                Cow::Borrowed(text) => StringStorage::Borrowed(text),
-                Cow::Owned(text) => StringStorage::new_owned(text.as_str()),
-            };
-
-            self.append_node(NodeKind::Text(text), range)?;
+            self.append_node(NodeKind::Text(StringStorage::from_cow(&text)), range)?;
         }
 
         self.after_text.push(text);
@@ -732,7 +727,8 @@ impl<'input> tokenizer::XmlEvents<'input> for Context<'input> {
             }
             tokenizer::Token::Comment(text, range) => {
                 self.reset_after_text();
-                self.append_node(NodeKind::Comment(StringStorage::Borrowed(text)), range)?;
+                let text = StringStorage::from_cow(&normalize_line_endings(text));
+                self.append_node(NodeKind::Comment(text), range)?;
             }
             tokenizer::Token::EntityDeclaration(name, definition) => {
                 self.entities.push(Entity {
@@ -1077,6 +1073,11 @@ fn process_text<'input>(
         return Ok(());
     }
 
+    // Without references, only line ends need normalizing.
+    if memchr(b'&', text.as_bytes()).is_none() {
+        return ctx.append_text(normalize_line_endings(text), range);
+    }
+
     let mut text_buffer = TextBuffer::new();
     let mut is_as_is = false; // TODO: explain
     let mut stream = Stream::from_substr(ctx.doc.text, range.clone());
@@ -1140,39 +1141,35 @@ fn process_text<'input>(
 // While the whole purpose of CDATA is to indicate to an XML library that this text
 // has to be stored as is, carriage return (`\r`) is still has to be replaced with `\n`.
 fn process_cdata<'input>(
-    mut text: &'input str,
+    text: &'input str,
     range: Range<usize>,
     ctx: &mut Context<'input>,
 ) -> Result<()> {
-    let mut pos = memchr(b'\r', text.as_bytes());
+    ctx.append_text(normalize_line_endings(text), range)
+}
 
-    // Add text as is if it has only valid characters.
-    if pos.is_none() {
-        ctx.append_text(Cow::Borrowed(text), range)?;
-        return Ok(());
+/// Translates `\r\n`, and any `\r` not followed by `\n`, into `\n`.
+///
+/// <https://www.w3.org/TR/xml/#sec-line-ends>
+fn normalize_line_endings(text: &str) -> Cow<'_, str> {
+    let bytes = text.as_bytes();
+    let mut crs = memchr_iter(b'\r', bytes).peekable();
+    if crs.peek().is_none() {
+        return Cow::Borrowed(text);
     }
 
-    let mut buf = String::new();
-
-    while let Some(pos1) = pos {
-        let (line, rest) = text.split_at(pos1);
-
-        buf.push_str(line);
-        buf.push('\n');
-
-        text = if rest.as_bytes().get(1) == Some(&b'\n') {
-            &rest[2..]
-        } else {
-            &rest[1..]
-        };
-
-        pos = memchr(b'\r', text.as_bytes());
+    let mut buf = String::with_capacity(text.len());
+    let mut start = 0;
+    for pos in crs {
+        buf.push_str(&text[start..pos]);
+        // In `\r\n`, drop the `\r`; the `\n` is copied with the next chunk.
+        if bytes.get(pos + 1) != Some(&b'\n') {
+            buf.push('\n');
+        }
+        start = pos + 1;
     }
-
-    buf.push_str(text);
-
-    ctx.append_text(Cow::Owned(buf), range)?;
-    Ok(())
+    buf.push_str(&text[start..]);
+    Cow::Owned(buf)
 }
 
 enum NextChunk<'a> {

@@ -30,6 +30,7 @@ use core::hash::{Hash, Hasher};
 use core::num::NonZeroU32;
 use core::ops::Range;
 
+use alloc::borrow::Cow;
 use alloc::vec::Vec;
 
 mod parse;
@@ -449,7 +450,15 @@ pub enum StringStorage<'input> {
     Owned(OwnedSharedString),
 }
 
-impl StringStorage<'_> {
+impl<'input> StringStorage<'input> {
+    /// Keeps a borrowed string borrowed and copies an owned one into shared storage.
+    pub(crate) fn from_cow(s: &Cow<'input, str>) -> Self {
+        match s {
+            Cow::Borrowed(s) => StringStorage::Borrowed(s),
+            Cow::Owned(s) => StringStorage::new_owned(s),
+        }
+    }
+
     /// Creates a new owned string copied from a `&str`.
     pub fn new_owned(s: &str) -> Self {
         StringStorage::Owned(s.into())
